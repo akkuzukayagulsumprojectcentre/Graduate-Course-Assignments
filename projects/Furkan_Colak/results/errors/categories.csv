@@ -1,0 +1,58 @@
+error,scope,detector,category,n,share,base,rate
+FN,D,lexical_lr,"impersonal, human length",429,0.7619893428063943,0.7552742616033755,0.7988826815642458
+FN,D,lexical_lr,cites an agency,60,0.10657193605683836,0.10548523206751055,0.8
+FN,D,lexical_lr,"first person, still missed",44,0.07815275310834814,0.0970464135021097,0.6376811594202898
+FN,D,lexical_lr,unsupported technical detail,30,0.05328596802841918,0.04219409282700422,1.0
+FN,other generators,lexical_lr,"first person, still missed",44,0.30344827586206896,0.4620253164556962,0.0334855403348554
+FN,other generators,lexical_lr,"impersonal, short",43,0.296551724137931,0.29852320675105487,0.050647820965842166
+FN,other generators,lexical_lr,"impersonal, human length",29,0.2,0.16772151898734178,0.06079664570230608
+FN,other generators,lexical_lr,cites an agency,28,0.19310344827586207,0.06856540084388185,0.14358974358974358
+FN,other generators,lexical_lr,unsupported technical detail,1,0.006896551724137931,0.0031645569620253164,0.1111111111111111
+FP,CISA,lexical_lr,advice-heavy,0,0.0,0.29535864978902954,0.0
+FP,CISA,lexical_lr,other,0,0.0,0.27848101265822783,0.0
+FP,CISA,lexical_lr,few proper nouns,0,0.0,0.189873417721519,0.0
+FP,CISA,lexical_lr,first person,0,0.0,0.14767932489451477,0.0
+FP,CISA,lexical_lr,product vulnerability notice,0,0.0,0.08860759493670886,0.0
+FP,vendors,lexical_lr,first person,170,0.8947368421052632,0.7534246575342466,0.1717171717171717
+FP,vendors,lexical_lr,few proper nouns,20,0.10526315789473684,0.1598173515981735,0.09523809523809523
+FP,vendors,lexical_lr,other,0,0.0,0.06621004566210045,0.0
+FP,vendors,lexical_lr,product vulnerability notice,0,0.0,0.01598173515981735,0.0
+FP,vendors,lexical_lr,advice-heavy,0,0.0,0.0045662100456621,0.0
+FN,D,transformer,"impersonal, human length",114,0.7215189873417721,0.7552742616033755,0.2122905027932961
+FN,D,transformer,cites an agency,15,0.0949367088607595,0.10548523206751055,0.2
+FN,D,transformer,"first person, still missed",10,0.06329113924050633,0.0970464135021097,0.14492753623188406
+FN,D,transformer,unsupported technical detail,19,0.12025316455696203,0.04219409282700422,0.6333333333333333
+FN,other generators,transformer,"first person, still missed",6,0.46153846153846156,0.4620253164556962,0.0045662100456621
+FN,other generators,transformer,"impersonal, short",1,0.07692307692307693,0.29852320675105487,0.001177856301531213
+FN,other generators,transformer,"impersonal, human length",1,0.07692307692307693,0.16772151898734178,0.0020964360587002098
+FN,other generators,transformer,cites an agency,5,0.38461538461538464,0.06856540084388185,0.02564102564102564
+FN,other generators,transformer,unsupported technical detail,0,0.0,0.0031645569620253164,0.0
+FP,CISA,transformer,advice-heavy,0,0.0,0.29535864978902954,0.0
+FP,CISA,transformer,other,1,0.1,0.27848101265822783,0.005050505050505051
+FP,CISA,transformer,few proper nouns,3,0.3,0.189873417721519,0.022222222222222223
+FP,CISA,transformer,first person,3,0.3,0.14767932489451477,0.02857142857142857
+FP,CISA,transformer,product vulnerability notice,3,0.3,0.08860759493670886,0.047619047619047616
+FP,vendors,transformer,first person,212,0.9098712446351931,0.7534246575342466,0.21414141414141413
+FP,vendors,transformer,few proper nouns,19,0.0815450643776824,0.1598173515981735,0.09047619047619047
+FP,vendors,transformer,other,0,0.0,0.06621004566210045,0.0
+FP,vendors,transformer,product vulnerability notice,2,0.008583690987124463,0.01598173515981735,0.09523809523809523
+FP,vendors,transformer,advice-heavy,0,0.0,0.0045662100456621,0.0
+FN,D,coordinator,"impersonal, human length",211,0.735191637630662,0.7552742616033755,0.3929236499068901
+FN,D,coordinator,cites an agency,28,0.0975609756097561,0.10548523206751055,0.37333333333333335
+FN,D,coordinator,"first person, still missed",22,0.07665505226480836,0.0970464135021097,0.3188405797101449
+FN,D,coordinator,unsupported technical detail,26,0.09059233449477352,0.04219409282700422,0.8666666666666667
+FN,other generators,coordinator,"first person, still missed",11,0.5,0.4620253164556962,0.00837138508371385
+FN,other generators,coordinator,"impersonal, short",2,0.09090909090909091,0.29852320675105487,0.002355712603062426
+FN,other generators,coordinator,"impersonal, human length",3,0.13636363636363635,0.16772151898734178,0.006289308176100629
+FN,other generators,coordinator,cites an agency,6,0.2727272727272727,0.06856540084388185,0.03076923076923077
+FN,other generators,coordinator,unsupported technical detail,0,0.0,0.0031645569620253164,0.0
+FP,CISA,coordinator,advice-heavy,0,0.0,0.29535864978902954,0.0
+FP,CISA,coordinator,other,1,0.5,0.27848101265822783,0.005050505050505051
+FP,CISA,coordinator,few proper nouns,0,0.0,0.189873417721519,0.0
+FP,CISA,coordinator,first person,1,0.5,0.14767932489451477,0.009523809523809525
+FP,CISA,coordinator,product vulnerability notice,0,0.0,0.08860759493670886,0.0
+FP,vendors,coordinator,first person,61,0.8472222222222222,0.7534246575342466,0.06161616161616162
+FP,vendors,coordinator,few proper nouns,11,0.1527777777777778,0.1598173515981735,0.05238095238095238
+FP,vendors,coordinator,other,0,0.0,0.06621004566210045,0.0
+FP,vendors,coordinator,product vulnerability notice,0,0.0,0.01598173515981735,0.0
+FP,vendors,coordinator,advice-heavy,0,0.0,0.0045662100456621,0.0

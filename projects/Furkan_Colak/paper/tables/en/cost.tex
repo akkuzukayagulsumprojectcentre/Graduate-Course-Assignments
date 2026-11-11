@@ -1,0 +1,20 @@
+\begin{table*}[t]
+\centering
+\footnotesize
+\caption{Cost and performance, one training generator. Inference on one RTX 4060 laptop GPU, three repetitions over a fixed sample. The Coordinator cost is the sum of its members run one after another; ``Fit'' excludes the LLM judge, which is not trained.}
+\label{tab:cost}
+\begin{tabular}{lrrrrcccc}
+\toprule
+Detector & ms/text & Rel. & GPU MiB & Fit s & F1, in & F1, D & AUC, D & F1, E \\
+\midrule
+Lexical-LR & 1.7 & 0.60 & -- & 1 & 0.997 & 0.329 & 0.979 & 0.961 \\
+Lexical-SVM & 2.0 & 0.72 & -- & 1 & 0.998 & 0.327 & 0.983 & 0.969 \\
+Stylometry & 25.6 & 9.27 & -- & 0 & 0.934 & 0.706 & 0.878 & 0.778 \\
+RoBERTa & 2.8 & 1.00 & 1269 & 20 & 0.992 & 0.859 & 0.982 & 0.991 \\
+LLM Judge & 1136.5 & 410.75 & 16 & -- & 0.504 & 0.499 & 0.533 & 0.628 \\
+Fast-DetectGPT & 195.9 & 70.78 & 5771 & -- & 0.744 & 0.540 & 0.699 & 0.427 \\
+Binoculars & 725.0 & 262.02 & 5005 & -- & 0.817 & 0.365 & 0.734 & 0.307 \\
+Coordinator & 1168.6 & 422.34 & -- & -- & 0.998 & 0.721 & 0.987 & 0.995 \\
+\bottomrule
+\end{tabular}
+\end{table*}

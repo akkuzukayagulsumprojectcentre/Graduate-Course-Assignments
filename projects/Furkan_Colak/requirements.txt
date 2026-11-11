@@ -1,0 +1,26 @@
+--extra-index-url https://download.pytorch.org/whl/cu126
+# Versions used for the reported results (Python 3.12.10, Windows 11, RTX 4060, driver 566.26).
+torch==2.14.1+cu126
+transformers==5.20.2
+accelerate==1.15.0
+bitsandbytes==0.50.2   # 4-bit loading of the two Binoculars models on an 8 GB GPU
+datasets==5.1.0
+scikit-learn==1.9.1
+xgboost==3.4.1
+pandas==3.1.0
+pyarrow==26.0.0
+numpy==2.5.4
+scipy==1.18.1
+statsmodels==0.15.0
+spacy==3.8.16
+httpx==0.28.1
+PyYAML==6.0.3
+python-dotenv==1.2.4
+tqdm==4.70.1
+matplotlib==3.11.2
+seaborn==0.13.2
+beautifulsoup4==4.15.0
+pypdf==6.21.2
+pymupdf==2.0
+jupyter
+pytest==9.1.1

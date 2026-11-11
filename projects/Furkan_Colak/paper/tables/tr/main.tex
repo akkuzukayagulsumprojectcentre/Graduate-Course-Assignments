@@ -1,0 +1,21 @@
+\begin{table*}[t]
+\centering
+\footnotesize
+\caption{Tek bir üreticiyle (A, B veya C) eğitilen modeller. F1, eğitim üreticileri ortalamasının üç seed üzerinden ortalama $\pm$ standart sapmasıdır; AUC, ROC-AUC'dir.}
+\label{tab:main}
+\begin{tabular}{lcccccccc}
+\toprule
+Dedektör & \multicolumn{2}{c}{Aynı üretici} & \multicolumn{2}{c}{Çapraz (A--C)} & \multicolumn{2}{c}{D: gpt-oss-120b} & \multicolumn{2}{c}{E: Gemini} \\
+ & F1 & AUC & F1 & AUC & F1 & AUC & F1 & AUC \\
+\midrule
+Lexical-LR & 0.997 $\pm$ 0.004 & 1.000 & 0.966 $\pm$ 0.008 & 1.000 & 0.329 $\pm$ 0.017 & 0.979 & 0.961 $\pm$ 0.012 & 1.000 \\
+Lexical-SVM & 0.998 $\pm$ 0.004 & 1.000 & 0.976 $\pm$ 0.004 & 1.000 & 0.327 $\pm$ 0.013 & 0.983 & 0.969 $\pm$ 0.011 & 1.000 \\
+Stilometri & 0.934 $\pm$ 0.006 & 0.984 & 0.868 $\pm$ 0.004 & 0.959 & 0.706 $\pm$ 0.013 & 0.878 & 0.778 $\pm$ 0.022 & 0.931 \\
+RoBERTa & 0.992 $\pm$ 0.003 & 1.000 & 0.990 $\pm$ 0.002 & 1.000 & 0.859 $\pm$ 0.022 & 0.982 & 0.991 $\pm$ 0.003 & 1.000 \\
+LLM Yargıç & 0.504 $\pm$ 0.024 & 0.409 & 0.504 $\pm$ 0.024 & 0.409 & 0.499 $\pm$ 0.026 & 0.533 & 0.628 $\pm$ 0.015 & 0.754 \\
+Fast-DetectGPT & 0.744 $\pm$ 0.009 & 0.828 & 0.714 $\pm$ 0.033 & 0.828 & 0.540 $\pm$ 0.054 & 0.699 & 0.427 $\pm$ 0.053 & 0.613 \\
+Binoculars & 0.817 $\pm$ 0.024 & 0.900 & 0.806 $\pm$ 0.025 & 0.900 & 0.365 $\pm$ 0.042 & 0.734 & 0.307 $\pm$ 0.060 & 0.671 \\
+Koordinatör & 0.998 $\pm$ 0.000 & 1.000 & 0.993 $\pm$ 0.003 & 1.000 & 0.721 $\pm$ 0.083 & 0.987 & 0.995 $\pm$ 0.003 & 1.000 \\
+\bottomrule
+\end{tabular}
+\end{table*}

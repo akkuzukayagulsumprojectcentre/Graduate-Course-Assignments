@@ -1,0 +1,27 @@
+\begin{table*}[t]
+\centering
+\footnotesize
+\caption{Models trained on CISA + ABC, threshold 0.5. FPR on all human excerpts of the publisher; recall, F1 and AUC on human excerpts paired with their LLM versions from A, B and C, averaged. FPR and F1 are mean $\pm$ std over three seeds; the interval resamples sources. The last column adds the other external publisher to training.}
+\label{tab:publishers}
+\begin{tabular}{llccrcrc}
+\toprule
+Publisher & Detector & FPR & 95\% CI & Recall & F1 & ROC-AUC & FPR, other publisher in training \\
+\midrule
+CISA & Lexical-LR & 0.014$\pm$0.023 & -- & 0.999 & 0.993$\pm$0.011 & 1.000 & -- \\
+CISA & RoBERTa & 0.042$\pm$0.007 & -- & 1.000 & 0.979$\pm$0.003 & 1.000 & -- \\
+CISA & Coordinator & 0.009$\pm$0.007 & -- & 1.000 & 0.996$\pm$0.004 & 1.000 & -- \\
+CISA & Fast-DetectGPT & 0.222$\pm$0.048 & -- & 0.721 & 0.739$\pm$0.029 & 0.828 & -- \\
+CISA & Binoculars & 0.093$\pm$0.008 & -- & 0.750 & 0.811$\pm$0.031 & 0.900 & -- \\
+Microsoft & Lexical-LR & 0.152$\pm$0.009 & [0.126, 0.177] & 1.000 & 0.930$\pm$0.004 & 1.000 & 0.016$\pm$0.007 \\
+Microsoft & RoBERTa & 0.159$\pm$0.029 & [0.134, 0.184] & 1.000 & 0.927$\pm$0.012 & 1.000 & 0.022$\pm$0.004 \\
+Microsoft & Coordinator & 0.046$\pm$0.046 & [0.033, 0.061] & 1.000 & 0.978$\pm$0.022 & 1.000 & 0.000$\pm$0.000 \\
+Microsoft & Fast-DetectGPT & 0.110$\pm$0.025 & [0.086, 0.134] & 0.874 & 0.880$\pm$0.008 & 0.954 & -- \\
+Microsoft & Binoculars & 0.030$\pm$0.007 & [0.017, 0.045] & 0.885 & 0.924$\pm$0.008 & 0.979 & -- \\
+Mandiant & Lexical-LR & 0.137$\pm$0.012 & [0.111, 0.166] & 1.000 & 0.936$\pm$0.005 & 1.000 & 0.011$\pm$0.003 \\
+Mandiant & RoBERTa & 0.198$\pm$0.041 & [0.162, 0.237] & 1.000 & 0.910$\pm$0.017 & 1.000 & 0.052$\pm$0.023 \\
+Mandiant & Coordinator & 0.064$\pm$0.016 & [0.045, 0.086] & 1.000 & 0.969$\pm$0.007 & 1.000 & 0.023$\pm$0.007 \\
+Mandiant & Fast-DetectGPT & 0.116$\pm$0.017 & [0.086, 0.150] & 0.825 & 0.848$\pm$0.011 & 0.940 & -- \\
+Mandiant & Binoculars & 0.016$\pm$0.006 & [0.003, 0.031] & 0.826 & 0.895$\pm$0.008 & 0.977 & -- \\
+\bottomrule
+\end{tabular}
+\end{table*}

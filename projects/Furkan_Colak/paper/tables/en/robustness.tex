@@ -1,0 +1,24 @@
+\begin{table*}[t]
+\centering
+\footnotesize
+\caption{Recall on LLM texts at threshold 0.5 under rewriting, prompt strategy and partial generation, trained on CISA + ABC (mean $\pm$ std over three seeds). * marks a recall change from the same excerpts before the change with Holm-adjusted p $<$ 0.05 (per detector).}
+\label{tab:robustness}
+\begin{tabular}{lccccc}
+\toprule
+Condition & Lexical-LR & RoBERTa & Coordinator & Fast-DetectGPT & Binoculars \\
+\midrule
+Writer only, no Editor & 0.999$\pm$0.002 & 1.000$\pm$0.000 & 1.000$\pm$0.000 & 0.839$\pm$0.032* & 0.855$\pm$0.041* \\
+Paraphrase, same model & 0.999$\pm$0.002 & 1.000$\pm$0.000 & 1.000$\pm$0.000 & 0.572$\pm$0.084* & 0.548$\pm$0.074* \\
+Paraphrase, other model & 1.000$\pm$0.000 & 1.000$\pm$0.000 & 1.000$\pm$0.000 & 0.610$\pm$0.054* & 0.575$\pm$0.066* \\
+Paraphrase twice & 1.000$\pm$0.000 & 1.000$\pm$0.000 & 1.000$\pm$0.000 & 0.588$\pm$0.051* & 0.570$\pm$0.066* \\
+Back-translation & 0.999$\pm$0.002 & 0.992$\pm$0.001* & 0.996$\pm$0.005 & 0.588$\pm$0.047* & 0.495$\pm$0.040* \\
+``Humanize'' prompt & 0.999$\pm$0.002 & 1.000$\pm$0.000 & 0.999$\pm$0.002 & 0.644$\pm$0.054* & 0.668$\pm$0.046* \\
+Advisory-style prompt & 0.997$\pm$0.005 & 0.998$\pm$0.003 & 1.000$\pm$0.000 & 0.642$\pm$0.079* & 0.637$\pm$0.077* \\
+Few-shot human examples & 0.982$\pm$0.005* & 0.969$\pm$0.013* & 0.950$\pm$0.013* & 0.764$\pm$0.056* & 0.774$\pm$0.035 \\
+Single agent reading the source & 0.663$\pm$0.113* & 0.721$\pm$0.052* & 0.601$\pm$0.121* & 0.757$\pm$0.041 & 0.650$\pm$0.086* \\
+25\% LLM sentences & 0.303$\pm$0.050* & 0.366$\pm$0.038* & 0.171$\pm$0.134* & 0.442$\pm$0.069* & 0.258$\pm$0.057* \\
+50\% LLM sentences & 0.844$\pm$0.005* & 0.620$\pm$0.036* & 0.535$\pm$0.023* & 0.600$\pm$0.058* & 0.481$\pm$0.081* \\
+75\% LLM sentences & 0.976$\pm$0.004* & 0.847$\pm$0.020* & 0.843$\pm$0.015* & 0.681$\pm$0.047* & 0.637$\pm$0.066* \\
+\bottomrule
+\end{tabular}
+\end{table*}

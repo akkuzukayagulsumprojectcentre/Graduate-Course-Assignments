@@ -1,0 +1,31 @@
+\begin{table*}[t]
+\centering
+\footnotesize
+\caption{Properties of misclassified against correctly classified texts: means of the two groups and Cliff's $\delta$ (positive when the misclassified texts have more). A text belongs to the first group when at least half of the runs misclassify it. * marks a Mann-Whitney test with Benjamini-Hochberg adjusted p $<$ 0.05. D: models trained on one generator; vendor excerpts: models trained on ABC.}
+\label{tab:contrast}
+\begin{tabular}{llcccccc}
+\toprule
+Group & Property & \multicolumn{2}{c}{Lexical-LR} & \multicolumn{2}{c}{RoBERTa} & \multicolumn{2}{c}{Coordinator} \\
+ & & means & $\delta$ & means & $\delta$ & means & $\delta$ \\
+\midrule
+D texts, missed / caught & Texts & 152 / 39 &  & 35 / 156 &  & 90 / 101 &  \\
+ & Words & 301 / 258 & +0.32* & 322 / 285 & +0.25* & 331 / 258 & +0.52* \\
+ & MTLD & 203 / 220 & -0.25* & 183 / 212 & -0.37* & 195 / 217 & -0.34* \\
+ & Type-token ratio & 0.680 / 0.718 & -0.39* & 0.647 / 0.696 & -0.53* & 0.654 / 0.717 & -0.66* \\
+ & Proper-noun share & 0.055 / 0.038 & +0.36* & 0.052 / 0.052 & -0.02 & 0.061 / 0.043 & +0.35* \\
+ & Uses first person (share of texts) & 0.08 / 0.18 & -0.10 & 0.06 / 0.11 & -0.05 & 0.09 / 0.11 & -0.02 \\
+ & LLM-side cues per 100 words & 2.01 / 3.16 & -0.50* & 1.69 / 2.37 & -0.33* & 1.91 / 2.55 & -0.29* \\
+ & Human-side cues per 100 words & 3.43 / 2.85 & +0.28* & 3.85 / 3.19 & +0.32* & 3.47 / 3.17 & +0.15 \\
+ & Identifiers not in the facts & 0.07 / 0.00 & +0.05 & 0.17 / 0.03 & +0.09* & 0.11 / 0.00 & +0.09* \\
+Vendor excerpts, flagged / passed & Texts & 64 / 374 &  & 79 / 359 &  & 15 / 423 &  \\
+ & Words & 282 / 307 & -0.32* & 297 / 305 & -0.13 & 249 / 306 & -0.48* \\
+ & MTLD & 108 / 92 & +0.39* & 109 / 91 & +0.43* & 121 / 93 & +0.64* \\
+ & Type-token ratio & 0.587 / 0.556 & +0.42* & 0.588 / 0.554 & +0.38* & 0.635 / 0.558 & +0.76* \\
+ & Proper-noun share & 0.071 / 0.070 & +0.01 & 0.060 / 0.072 & -0.22* & 0.060 / 0.071 & -0.25 \\
+ & Pronoun share & 0.035 / 0.035 & +0.03 & 0.036 / 0.035 & +0.09 & 0.039 / 0.035 & +0.21 \\
+ & First person per 100 words & 1.47 / 0.86 & +0.35* & 1.44 / 0.84 & +0.38* & 1.19 / 0.94 & +0.14 \\
+ & LLM-side cues per 100 words & 2.44 / 1.44 & +0.45* & 2.31 / 1.43 & +0.43* & 2.16 / 1.57 & +0.30 \\
+ & Human-side cues per 100 words & 3.09 / 3.73 & -0.28* & 3.20 / 3.73 & -0.25* & 3.26 / 3.65 & -0.20 \\
+\bottomrule
+\end{tabular}
+\end{table*}

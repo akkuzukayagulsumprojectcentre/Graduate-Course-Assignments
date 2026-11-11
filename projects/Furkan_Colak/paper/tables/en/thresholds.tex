@@ -1,0 +1,27 @@
+\begin{table*}[t]
+\centering
+\footnotesize
+\caption{Effect of the decision rule, training on one of A, B, C. Every threshold is set on validation data. Pseudo-unseen uses validation texts of local generators that are neither in training nor the test generator. Human 1\% and 5\% use validation human scores alone.}
+\label{tab:thresholds}
+\begin{tabular}{llccccccc}
+\toprule
+Detector & Threshold rule & F1, in & F1, cross & F1, D & Recall, D & F1, E & F1, ext. & FPR, ext. \\
+\midrule
+Lexical-LR & Fixed 0.5 & 0.997$\pm$0.004 & 0.966$\pm$0.008 & 0.329$\pm$0.017 & 0.208 & 0.961$\pm$0.012 & 0.982$\pm$0.001 & 0.003 \\
+Lexical-LR & Validation F1 & 0.997$\pm$0.003 & 0.978$\pm$0.019 & 0.502$\pm$0.099 & 0.363 & 0.980$\pm$0.025 & 0.983$\pm$0.005 & 0.016 \\
+Lexical-LR & Pseudo-unseen F1 & 0.996$\pm$0.003 & 0.994$\pm$0.003 & 0.758$\pm$0.047 & 0.619 & 0.996$\pm$0.004 & 0.971$\pm$0.001 & 0.058 \\
+Lexical-LR & Human 5\% FPR & 0.986$\pm$0.017 & 0.986$\pm$0.016 & 0.886$\pm$0.018 & 0.823 & 0.987$\pm$0.017 & 0.905$\pm$0.019 & 0.212 \\
+Lexical-LR & Human 1\% FPR & 0.991$\pm$0.015 & 0.990$\pm$0.014 & 0.852$\pm$0.032 & 0.761 & 0.991$\pm$0.015 & 0.935$\pm$0.031 & 0.139 \\
+RoBERTa & Fixed 0.5 & 0.992$\pm$0.003 & 0.990$\pm$0.002 & 0.859$\pm$0.022 & 0.777 & 0.991$\pm$0.003 & 0.960$\pm$0.009 & 0.084 \\
+RoBERTa & Validation F1 & 0.992$\pm$0.006 & 0.982$\pm$0.005 & 0.773$\pm$0.171 & 0.685 & 0.979$\pm$0.015 & 0.969$\pm$0.011 & 0.057 \\
+RoBERTa & Pseudo-unseen F1 & 0.989$\pm$0.007 & 0.983$\pm$0.006 & 0.819$\pm$0.103 & 0.743 & 0.980$\pm$0.010 & 0.964$\pm$0.012 & 0.071 \\
+RoBERTa & Human 5\% FPR & 0.961$\pm$0.031 & 0.961$\pm$0.031 & 0.909$\pm$0.014 & 0.905 & 0.961$\pm$0.031 & 0.901$\pm$0.035 & 0.223 \\
+RoBERTa & Human 1\% FPR & 0.980$\pm$0.019 & 0.978$\pm$0.018 & 0.862$\pm$0.065 & 0.807 & 0.977$\pm$0.017 & 0.948$\pm$0.033 & 0.111 \\
+Coordinator & Fixed 0.5 & 0.998$\pm$0.000 & 0.993$\pm$0.003 & 0.721$\pm$0.083 & 0.593 & 0.995$\pm$0.003 & 0.989$\pm$0.004 & 0.019 \\
+Coordinator & Validation F1 & 0.998$\pm$0.000 & 0.993$\pm$0.003 & 0.708$\pm$0.092 & 0.580 & 0.993$\pm$0.004 & 0.989$\pm$0.004 & 0.018 \\
+Coordinator & Pseudo-unseen F1 & 0.992$\pm$0.008 & 0.991$\pm$0.003 & 0.803$\pm$0.087 & 0.705 & 0.992$\pm$0.008 & 0.980$\pm$0.013 & 0.041 \\
+Coordinator & Human 5\% FPR & 0.973$\pm$0.019 & 0.973$\pm$0.019 & 0.935$\pm$0.001 & 0.928 & 0.973$\pm$0.019 & 0.918$\pm$0.014 & 0.180 \\
+Coordinator & Human 1\% FPR & 0.984$\pm$0.008 & 0.984$\pm$0.009 & 0.892$\pm$0.037 & 0.840 & 0.984$\pm$0.009 & 0.950$\pm$0.014 & 0.107 \\
+\bottomrule
+\end{tabular}
+\end{table*}

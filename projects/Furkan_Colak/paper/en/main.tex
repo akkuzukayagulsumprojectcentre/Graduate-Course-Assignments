@@ -1,0 +1,923 @@
+\documentclass[journal]{IEEEtran}
+\usepackage{fontspec}
+% Times clone loaded by file name; tectonic compiles with XeTeX.
+\setmainfont{texgyretermes}[Extension=.otf, UprightFont=*-regular, BoldFont=*-bold,
+  ItalicFont=*-italic, BoldItalicFont=*-bolditalic]
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{url}
+\usepackage{cite}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta}
+\graphicspath{{../../figures/}}
+
+% Every number in the text comes from results/ through this file (written by `src.cli report`).
+\input{../numbers.tex}
+
+\begin{document}
+
+\title{Detecting LLM-Generated Cyber Threat Intelligence Under Generator, Publisher and Rewriting Shift:
+A Multi-Agent Study}
+
+\author{Furkan~\c{C}olak%
+\thanks{This paper was prepared for the Information Security graduate course taught by Asst.\ Prof.\ Gülsüm Akkuzu Kaya,
+Kırşehir Ahi Evran University.}%
+\thanks{F. \c{C}olak is an M.Sc. student in the Department of Computer Engineering, Graduate School of Natural and Applied
+Sciences, Kırşehir Ahi Evran University, Kırşehir, Türkiye (e-mail: colak.furkan@ogr.ahievran.edu.tr;
+furkancolakofficial@gmail.com).}}
+
+\markboth{Information Security, M.Sc. Course Project, 2026}{\c{C}olak: Detecting LLM-Generated CTI}
+
+\maketitle
+
+\begin{abstract}
+Fabricated cyber threat intelligence (CTI) can poison the knowledge bases and models that consume it, and large
+language models (LLMs) make such text cheap to produce. We test whether LLM-generated CTI can be separated from
+human-written reports when the generator, the publisher or the text itself changes. Human excerpts come from CISA
+publications released before ChatGPT, and from Microsoft and Mandiant posts kept for testing. A pipeline of three
+agents (Analyst, Writer, Editor) has five generators from five model families write new texts from the same extracted
+facts, and twelve rewriting, prompt and partial-generation conditions are derived from these texts. Detection is
+split across agents as well: TF-IDF models, a stylometric model, fine-tuned RoBERTa and an LLM judge feed a stacked
+Coordinator, with Fast-DetectGPT and Binoculars as training-free references. In-generator F1 reaches
+\FoneInCoord{}. On an unseen 120B model a TF-IDF detector falls to F1 \FoneDLexLR{} although its ROC-AUC stays at
+\AucDLexLR{}. Training on three generators instead of one raises that F1 to \PoolDLexLR{}, and it also raises the
+detector's false positive rate on Microsoft excerpts from \PoolfprOneMicrosoftLexlr{} to \PoolfprThreeMicrosoftLexlr{}. A
+threshold set from human scores alone shows the same trade. The error analysis explains it: the missed texts are
+long, impersonal and low in lexical diversity, as CISA excerpts are, and the flagged vendor excerpts are shorter,
+written in the first person and lexically diverse, as the training generators are. Calibration on validation data
+worsens the probabilities under generator shift. Paraphrasing by an LLM lowers the recall of the training-free
+detectors and leaves the trained ones unchanged, while rewriting from the source and sentence-level mixing lower
+both. The Coordinator is better than RoBERTa in \GapWins{} of \GapN{} scenarios and worse in \GapLosses{}, those in
+which the member it weights most fails.
+\end{abstract}
+
+\begin{IEEEkeywords}
+cyber threat intelligence, machine-generated text detection, large language models, multi-agent systems,
+calibration, domain shift
+\end{IEEEkeywords}
+
+\section{Introduction}
+\IEEEPARstart{C}{yber} threat intelligence (CTI) describes threat actors, malware, exploited vulnerabilities and the
+defensive steps that follow from them. Analysts read it, and machines consume it too. Indicators and narratives are
+parsed into knowledge graphs, turned into detection rules, and used to train or prompt other models. A fabricated
+report that enters this flow can therefore do harm without any human being deceived. Ranade et al.\ fine-tuned GPT-2
+on CTI, found that threat hunters rated the generated reports as credible as real ones, and used the fake text to
+poison a cybersecurity knowledge graph \cite{Ranade_2021}. Huang et al.\ fine-tuned a larger LLM on cybersecurity
+text and found that human annotators could not tell its CTI from genuine reports \cite{Huang_2025}. Qian et al.\
+mixed fabricated CTI into authentic collections to simulate data poisoning \cite{Qian_2025}. Current LLMs write
+longer and more fluent text than these fine-tuned models, and many are free to use.
+
+Detecting machine-generated text is an active field, but most of its evidence comes from news, essays, reviews and
+question answering \cite{Wang_2024,Dugan_2024,Wu_2024}. Three results from that work matter here. Detectors trained
+on one generator lose accuracy on others and tend to label text from unseen generators as human
+\cite{Wang_2024,Dugan_2024}. Paraphrasing a generated text with a second model defeats many detectors
+\cite{Krishna_2023,Sadasivan_2023}. Human writing that differs from the training distribution, such as non-native
+English, is flagged as machine-written far more often \cite{Liang_2023}. To our knowledge none of the three has been
+tested on CTI, and CTI differs from the benchmark domains in ways that could change them. It is dense in proper nouns and
+identifiers, it follows the house style of the issuing organization, and a single report is often split and
+re-quoted in short excerpts.
+
+The existing CTI studies each use one fine-tuned generator and test detectors on that generator's output
+\cite{Ranade_2021,Huang_2025,Qian_2025}. They do not show what happens when a detector meets a generator family it
+was not trained on, a larger model, a report from another organization, or a text that was rewritten after
+generation. They also do not show whether a failure under such a shift means that the detector has lost the signal
+or that its decision threshold no longer fits. The two cases need different remedies, new training data in the
+first and a new threshold in the second, so a study that reports only F1 at a fixed threshold cannot tell an
+operator what to do.
+
+We study these questions on a corpus built for them. Human excerpts come from CISA publications released before
+ChatGPT, and from Microsoft and Mandiant posts of the same period that are kept out of the main training sets. LLM
+versions are written by a pipeline of agents. An Analyst extracts the facts of each excerpt once, and for each
+generator a Writer and an Editor produce a new text from those facts alone. All generators therefore describe the
+same content and none of them sees the human wording, which lets us read a difference between generators as a
+difference of writing. Detection is split across agents that look at different evidence (word and character
+n-grams, stylometric statistics, a fine-tuned encoder, an instruction-tuned LLM judge), and a Coordinator combines
+them. Two training-free detectors from the literature, Fast-DetectGPT \cite{Bao_2024} and Binoculars
+\cite{Hans_2024}, serve as external reference points.
+
+The hypothesis tested is \textbf{H1}: human-written and LLM-generated CTI differ in statistical and linguistic
+properties that machine learning models can use, in-generator and across generators. The paper makes four
+contributions.
+\begin{enumerate}
+\item We build a content-controlled CTI corpus in which five generators from five model families write from the
+same extracted facts. Human text from three publishers, all released on or before 30 November 2022, separates
+generator shift from publisher shift, and twelve rewriting, prompt-strategy and partial-generation conditions are
+applied to the test excerpts. All splits are made at the level of the source report.
+\item We measure ranking and decision separately under shift. Three calibrators and five threshold rules are
+fitted on validation data only, two of them without any assumption about the test generator. The result is that
+both remedies for an unseen generator, pooled training data and a threshold from human scores, raise false alarms
+on another publisher's human text.
+\item We test when combining detector agents helps. The stacked Coordinator is compared with RoBERTa, the member
+that holds up best under shift, in \GapN{} scenarios with paired source-level intervals and Holm correction. Four
+Coordinator variants show why the combination falls behind, and inference cost is measured for every detector.
+\item We analyse both kinds of error against base rates. Missed LLM texts and flagged human texts are compared with
+the correctly classified ones on length, lexical diversity, proper-noun share, first-person use and the n-grams the
+lexical model weights most, with categories, examples and regressions with source-clustered errors.
+\end{enumerate}
+
+Section~\ref{sec:related} reviews related work and states how this study differs from it.
+Sections~\ref{sec:data} and~\ref{sec:agents} describe the data and the agents, Section~\ref{sec:setup} the
+experimental design, and Section~\ref{sec:results} the results. Section~\ref{sec:discussion} discusses causes and
+practical use, and Section~\ref{sec:limits} the limitations.
+
+\section{Related Work}\label{sec:related}
+\subsection{Supervised and zero-shot detectors}
+Early detectors relied on token statistics. GLTR showed that sampled text concentrates on high-rank tokens and used
+this to support human readers \cite{Gehrmann_2019}. Classifiers fine-tuned on pre-trained encoders such as RoBERTa
+\cite{Liu_2019} detected GPT-2 output with high accuracy \cite{Solaiman_2019}, and fine-tuned encoders remain strong
+baselines in shared tasks \cite{Wang_SemEval_2024}. Training-free methods score a text with a reference language
+model. DetectGPT compares the log-probability of a passage with that of perturbed copies \cite{Mitchell_2023}.
+Fast-DetectGPT replaces the perturbation step with sampling from the model's own conditional distributions and
+scores what its authors call conditional probability curvature, which they report to be 340 times faster
+\cite{Bao_2024}. Binoculars divides the perplexity of a text under one model by the cross-perplexity between two
+related models, which normalizes for how surprising the prompt itself is \cite{Hans_2024}. Ghostbuster feeds token
+probabilities from several weaker models into a linear classifier and generalizes well across domains
+\cite{Verma_2024}. Its feature models are OpenAI models that are no longer served, so we could not reproduce it.
+
+\subsection{Generalization, attacks and partial generation}
+M4 covers several generators, domains and languages, and reports that detectors often label text from unseen
+generators as human \cite{Wang_2024}. RAID shows that unseen generators, decoding settings and adversarial edits
+defeat most detectors \cite{Dugan_2024}, and DetectRL builds its test conditions from the ways generated text is used
+in practice, including paraphrasing and mixing human with machine text \cite{Wu_2024}. Krishna et al.\ show that a
+paraphrasing model evades several detectors \cite{Krishna_2023}, and Sadasivan et al.\ relate the best achievable
+AUROC to the distance between the human and machine distributions \cite{Sadasivan_2023}. RADAR trains a detector
+against a paraphraser to make it harder to evade by rewriting \cite{Hu_2023}. When only part of a text is generated,
+the task becomes locating the boundary between human and machine sentences, as in SemEval-2024 Task~8
+\cite{Wang_SemEval_2024,Qu_2024}. Detectors also misfire on human text that differs from their training data:
+non-native English writing is flagged far more often than native writing \cite{Liang_2023}.
+
+\subsection{Ensembles and multi-agent detection}
+Stacked generalization trains a second-level model on the outputs of first-level models \cite{Wolpert_1992}. Ong and
+Quek combine the outputs of several DetectGPT classifiers and report a higher AUROC than DetectGPT alone when the
+generator is unknown \cite{Ong_2024}. Two recent systems assign detection to cooperating LLM agents. In
+CAMF, three agents profile the style, the semantic coherence and the reasoning of a text, two further agents argue
+over inconsistencies between the profiles, and a judge decides \cite{Wang_CAMF_2025}. AGENT-X routes a text to
+expert agents that apply linguistic guidelines and needs no decision threshold \cite{Li_AgentX_2025}. Both are
+built from prompted LLMs without training and are evaluated on general-domain benchmarks (news, essays, stories,
+question answering) with text from GPT-3.5, GPT-4 and Claude models. They therefore say little about a learned
+combination of trained detectors, and in particular about whether such a combination keeps its advantage over its
+members when the generator changes.
+
+\subsection{Calibration under shift}
+Modern neural classifiers are often over-confident, and temperature scaling is a simple fix in-distribution
+\cite{Guo_2017}. Platt scaling \cite{Platt_1999}, isotonic regression \cite{Zadrozny_2002} and temperature scaling
+are fitted on held-out data from the training distribution. Under dataset shift, calibration from in-distribution
+data degrades and can give little protection \cite{Ovadia_2019}. Calibration error is commonly measured with binned
+expected calibration error \cite{Naeini_2015}, the Brier score and the negative log-likelihood. For text detection
+the practical case is a detector whose ROC-AUC stays high on a new generator while its F1 falls. We ask whether the
+threshold is then the problem and whether it can be repaired without data from that generator.
+
+\subsection{LLMs and CTI}
+Ranade et al.\ generated fake CTI with fine-tuned GPT-2 for data poisoning \cite{Ranade_2021}. Huang et al.\
+fine-tuned an LLM on domain data, showed that annotators could not separate its CTI from genuine reports, and
+benchmarked misinformation detectors on it \cite{Huang_2025}. Qian et al.\ fine-tuned a general language model to
+generate fake CTI and proposed a BERT and TextCNN classifier to find it \cite{Qian_2025}.
+
+\subsection{How this study differs}
+The CTI studies above use one fine-tuned generator, one source of human text and a fixed decision threshold. This
+study differs in four respects. (i) Generation is content-controlled: five generators from five families write from
+identical extracted facts and none sees the human wording, so cross-generator results are not confounded by topic.
+(ii) Shift is tested along three separate axes, generator (unseen families and larger models), publisher (Microsoft
+and Mandiant human text never used in the main training sets) and rewriting (paraphrase, back-translation, a
+``humanize'' prompt, prompt strategies and sentence-level mixing), with paired source-level statistics.
+(iii) Calibration and threshold choice are studied as a question separate from ranking, with every fit restricted to
+training and validation data. (iv) The multi-agent detector is not assumed to help. It is compared with its
+strongest member under shift scenario by scenario, next to two published zero-shot detectors and a cost
+measurement. The general-domain benchmarks \cite{Wang_2024,Dugan_2024,Wu_2024} cover more generators and attacks
+than we do. They do not cover the CTI register, in which identifiers, agency names and house style carry much of
+the signal.
+
+\section{Data}\label{sec:data}
+\input{../tables/en/external.tex}
+\subsection{Human-written CTI}
+\emph{CISA (training, validation and test).} We collected CISA cybersecurity advisories, analysis reports and
+alerts, which are in the public domain. Release dates were read from the advisory code or URL, because the pages
+show only the last revision date. We kept documents released on or before 30 November 2022, before ChatGPT was
+public, so that human authorship is not in doubt. Vendor patch notices and catalog updates were excluded. From each
+page we kept narrative \texttt{<p>} paragraphs of at least 20 words, dropped tables, code, indicator lists and
+boilerplate, and joined consecutive paragraphs into excerpts of 150--350 whitespace-separated words, at most
+\MaxChunks{} per source. This gave \NSources{} sources and \NHumanChunks{} excerpts. Each source received a topic
+label (APT, ransomware, phishing, vulnerability, malware, other) from keyword rules. Word counts in the tables are
+the alphabetic tokens counted by the stylometric features, which are slightly fewer.
+
+\emph{Microsoft and Mandiant (independent test only).} To test whether the detectors confuse another organization's
+writing style with LLM authorship, we collected two vendor sources with the same date cutoff: the Microsoft Security
+Blog and the Mandiant threat intelligence blog, now hosted by Google Cloud. For Microsoft we kept posts that the
+blog itself labels as content type \emph{Research} and topic \emph{Threat intelligence} and excluded product news
+and best-practice posts. Microsoft's page metadata show modification dates from a recent site migration, not a
+revision history, so we dated posts by the publication date in the URL and removed paragraphs that announce later
+updates (for example, renamed threat actors or ``2023 update'' notes). Mandiant posts carry their original date only
+in the visible byline. The Mandiant feed also contains tooling and red-team posts, which we excluded by title rules.
+Excerpts were built as for CISA. We sampled \NExtSourcesMicrosoft{} Microsoft and \NExtSourcesMandiant{} Mandiant
+sources (\NExtChunksMicrosoft{} and \NExtChunksMandiant{} excerpts) with a fixed seed. Table~\ref{tab:external}
+gives counts, date ranges and lengths. These texts are never part of the main training sets. One augmented
+experiment adds one publisher to training and tests on the other (Section~\ref{sec:setup}). The pages are
+copyrighted, so the repository holds their URLs and excerpt hashes and the collection script rebuilds the text.
+
+\subsection{Multi-agent generation}
+\input{../pipeline.tex}
+Fig.~\ref{fig:pipeline} summarizes the pipeline. Each agent is a role prompt bound to one model. It receives one
+message and returns one. The \emph{Analyst} reads a human excerpt and returns the facts it states as JSON with ten
+keys (actor, malware, CVEs, TTPs, targets, sectors, indicator types, timeline, impact, mitigations), with the
+instruction to leave a key empty when the excerpt says nothing about it. It runs once per excerpt on a local
+Llama~3.1~8B with JSON-constrained output at temperature 0.2. For each generator, a \emph{Writer} receives the facts
+and a target length equal to that of the human excerpt and writes a CTI text. An \emph{Editor} then receives the
+facts and the draft and revises the draft against the facts, with the instruction not to add new ones. The Writer
+prompt is one of four templates (SOC bulletin, vendor blog, government advisory, incident report) and the sampling
+temperature is 0.7 or 1.0. Both are drawn from a random generator seeded by generator and excerpt, so an
+interrupted run resumes with the same choices, and both are stored with every text together with all agent
+messages and the model name. A reply that is empty or opens with a refusal is requested again, up to three times,
+after which the excerpt is skipped for that generator.
+
+The training generators run locally through Ollama: A, Llama~3.1~8B (Meta); B, Qwen~2.5~7B (Alibaba); and C,
+Mistral~7B (Mistral AI). Two larger API models serve only as unseen test generators: D, gpt-oss-120b (OpenAI
+weights, Groq API), and E, Gemini~3.1~Flash-Lite (Google API). Their free tiers allow about 200k tokens and 500
+requests per day. After an initial unrestricted run we therefore restricted D and E to excerpts whose source falls
+in the test split of at least one seed, and to the multi-agent condition. All \NVarChunks{} such excerpts have a D
+and an E version. Texts generated before the restriction bring the coverage to \NCoverD{} and \NCoverE{} of all
+excerpts. They are never used for training and enter only the corpus statistics. For a fixed \SingleShare{} of the
+sources, each local generator also produces a \emph{single-agent} version, one call that reads the human excerpt
+and rewrites it. The external excerpts receive LLM versions from A, B and C through the same pipeline.
+
+\subsection{Rewriting, prompt strategies and partial generation}
+For every excerpt whose source is in the test split of at least one seed, we derived further LLM texts from the
+multi-agent texts of A, B and C (Table~\ref{tab:robustness} lists them). Five conditions rewrite a finished text:
+\emph{paraphrase, same model} (the generator rewrites its own text with an instruction to keep every fact, name and
+number), \emph{paraphrase, other model} (A's text rewritten by B, B's by C, C's by A), \emph{paraphrase twice} (the
+same-model paraphrase paraphrased again), \emph{back-translation} through German, and a \emph{``humanize''} prompt
+that asks for the register of an experienced analyst at a national CERT, without first person and without advice
+to the reader. Two prompt strategies change the Writer: an \emph{advisory-style} prompt that asks for the
+impersonal register of a government advisory, and a \emph{few-shot} prompt that shows two human excerpts taken from
+sources that are in no seed's test split. The \emph{Writer-only} condition is the Writer's draft before the Editor,
+which measures what the third agent changes. Finally, \emph{partly generated} texts join sentences of a human
+excerpt with sentences of its own LLM version so that LLM sentences make up about 25\%, 50\% or 75\% of the words.
+The LLM block is placed first or last at random, because RoBERTa reads only the first 256 tokens. In total this
+adds \NVarTexts{} LLM texts. We label every partly generated text as LLM. This is a convention: a text with a
+quarter of LLM words is mostly human, and ``recall'' on these texts measures how much inserted LLM text a detector
+needs before it responds.
+
+We did not build a human-edited set, in which people revise LLM drafts. Simulating such edits with another LLM
+would measure LLM rewriting a second time, so we leave this condition to future work and use the sentence-level
+mixtures as the closest available proxy (Section~\ref{sec:limits}).
+
+\subsection{Preprocessing and splits}
+LLM outputs contain wrapping that is not part of the text: reasoning tags, preambles such as ``Here is the revised
+text'', titles, markdown, bullet markers and word-count notes. We remove these and normalize Unicode variants of
+dashes and quotes in all texts, human and generated. The effect of this step is measured in an ablation. Texts
+under 50 words are dropped.
+
+Splits are made by source report: 70\% of CISA sources for training, 10\% for validation and 20\% for testing,
+separately for each seed (42, 123, 2024). A human excerpt and all of its LLM versions, rewritten or not, always fall
+in the same split. Vectorizers, scalers, detectors, the Coordinator, calibrators and thresholds are fitted on
+training or validation data only. Test, D, E, rewritten and external texts are only scored.
+
+\section{Detection Agents}\label{sec:agents}
+\subsection{Members}
+\begin{itemize}
+\item \textbf{Lexical-LR} (baseline 1): word 1--2-gram and character 3--5-gram TF-IDF with logistic regression.
+\item \textbf{Lexical-SVM} (baseline 2): the same features with a linear SVM, Platt-calibrated.
+\item \textbf{Stylometry}: 32 features in five groups (length, lexical diversity including MTLD \cite{McCarthy_2010},
+punctuation, repetition, part-of-speech shares) with XGBoost.
+\item \textbf{Transformer}: RoBERTa-base \cite{Liu_2019} fine-tuned for three epochs, maximum length 256 tokens.
+\item \textbf{LLM Judge}: Gemma~2~9B, a model family not used for generation, asked zero-shot for the probability
+that a text is AI-generated.
+\end{itemize}
+
+\subsection{Training-free reference detectors}
+\emph{Fast-DetectGPT} uses the analytic form of the conditional probability curvature with GPT-Neo~2.7B as both the
+sampling and the scoring model \cite{Bao_2024}. \emph{Binoculars} uses the authors' pair, Falcon-7B as observer and
+Falcon-7B-Instruct as performer \cite{Hans_2024}. Two 7B models do not fit together on an 8~GB GPU, so both are
+loaded in 4-bit precision and run in two passes. The observer's next-token distribution is stored on disk,
+truncated to its 64 most probable tokens and renormalized, and the performer pass computes perplexity and
+cross-perplexity from it. Without truncation this two-pass computation reproduces the exact score, which we checked
+on a small model. The truncation is not harmless. On \NBinoCheck{} randomly chosen texts scored both ways, the
+truncated score was higher than the exact one in \BinoHigher{} cases, with a median absolute difference of
+\BinoMedDiff{} against a median exact score of \BinoMedScore{}, while the rank correlation between the two was
+\BinoRho{}. Our Binoculars scores are therefore shifted but order the texts almost as the exact ones do. Both
+methods read at most 512 tokens. They need no training, but their scores are not probabilities. We map them to
+probabilities with class-balanced Platt scaling on the validation split of each training set, so that they are
+compared with the supervised detectors under the same threshold rules.
+
+\subsection{Coordinator}
+The Coordinator is a logistic regression on the logits of the five members' probabilities
+(stacked generalization \cite{Wolpert_1992}),
+\begin{equation}
+P(\text{LLM} \mid x) = \sigma\Big(b + \sum_{m=1}^{5} w_m \log\frac{p_m(x)}{1 - p_m(x)}\Big),
+\end{equation}
+where $p_m(x)$ is the probability from member $m$ and $\sigma$ the logistic function. The weights $w_m$ and the bias
+$b$ are fitted on the validation split of the training generators, which the members have not been trained on.
+They are logged per run and reported with the results. To find out why a stack can fall behind its best member, we
+evaluate four variants on the same predictions: the unweighted mean of member logits (no learned weights), the
+single member with the best validation F1 (selection in place of combination), a stack fitted on validation texts
+of local generators that are \emph{not} in the training set (weights learned under a simulated generator shift), and
+the stack with the two zero-shot detectors added as members.
+
+\subsection{Why several agents}\label{sec:why}
+\emph{Generation.} Splitting fact extraction from writing serves the experiment. When one prompt reads the human
+excerpt and rewrites it, as in our single-agent condition, the output keeps names and phrasing of the source, and
+different generators keep different amounts of it. Between \OverlapSingleMin{} and \OverlapSingleMax{} of the word
+trigrams of a single-agent text also occur in its human excerpt, depending on the generator, against
+\OverlapMultiMin{} to \OverlapMultiMax{} for multi-agent texts of the same excerpts, where the remaining overlap
+comes from entity names and stock phrases that pass through the facts. Cross-generator differences in the
+single-agent condition would thus mix style with copying. With a shared Analyst, the content is fixed across all
+five generators and the human wording is never shown to the Writer. The Editor adds a review step, as in human CTI
+production, and its effect is measured by the Writer-only condition. The price is three calls per text instead of
+one.
+
+\emph{Detection.} The members use different evidence: surface n-grams, distributional statistics of style,
+contextual representations, the judgment of an instruction-tuned model and, for the reference detectors, likelihood
+under another language model. A generator shift does not affect these equally. A larger generator may match human
+length, which removes a stylometric cue, while keeping the lower proper-noun share that the lexical models use. If
+member errors are not perfectly correlated, a learned combination can be more accurate than any member. The same
+argument says where it should fail. Weights fitted on validation texts of the training generators reward the
+member that is most reliable there, and that member need not be the one that transfers best. The variants above
+test this directly, and Section~\ref{sec:results} reports when the combination helps and when it does not.
+
+\section{Experimental Design}\label{sec:setup}
+\subsection{Scenarios}
+One training run is made for every non-empty subset of the local generators (A, B, C, AB, AC, BC, ABC) and every
+seed, and each trained model is tested on the test split of every generator. This yields four settings from the
+same runs: \emph{E1 in-generator} (train and test on the same generator, plus the pooled ABC model), \emph{E2
+cross-generator} (train on one, test on another; the required Human+A $\rightarrow$ Human+B and Human+A
+$\rightarrow$ Human+C cases are part of it), \emph{E3 leave-one-out} (train on two, test on the third) and \emph{E4
+external generator} (any training set, tested on D or E). Each test set holds the LLM texts of one generator for
+the test sources and the human excerpts they were made from, so the classes are balanced.
+
+The same runs score the external publishers and the rewritten texts. \emph{Publisher shift} is measured by the
+false positive rate on all Microsoft and Mandiant human excerpts and by recall, F1 and ROC-AUC on those excerpts
+paired with their A, B and C versions. \emph{Rewriting and partial generation} are measured by recall on the
+derived texts, which is compared with recall on the multi-agent texts of the same excerpts. The single-agent
+condition is compared with multi-agent texts of the same model and the same excerpts. Two augmented trainings, with
+three seeds each, test whether more varied training data help: ABC plus one external publisher (human and LLM
+versions), tested on the other publisher, and ABC plus paraphrased and single-agent texts of the training sources.
+
+\subsection{Metrics and statistics}
+We report accuracy, precision, recall, F1, macro-F1, ROC-AUC and PR-AUC as mean $\pm$ standard deviation over three
+seeds. Intervals and tests work at the level of source reports. Test sources are resampled with replacement
+(2{,}000 bootstrap samples), which gives a 95\% percentile interval for a metric, and for a comparison the metric
+difference is recomputed on the same resampled sources for both systems, which gives a paired interval and a
+two-sided $p$-value. With 2{,}000 samples the smallest such $p$-value is $2/2001$, so Holm's correction
+\cite{Holm_1979} cannot reject anything in a family of more than fifty tests. We therefore pool the runs of a
+comparison before testing: one test per detector and target for the in-generator against cross-generator gap, one
+per scenario for the Coordinator against RoBERTa, one per condition and detector for the rewriting conditions.
+Holm's method is applied within each of these families. Where tests are reported per run or per feature, the
+Benjamini-Hochberg procedure \cite{Benjamini_1995} is used. Detectors are also compared on single test sets with
+exact McNemar tests, Holm-corrected per detector pair. Linguistic differences are tested with Mann-Whitney U and
+Cliff's $\delta$ as the effect size, and distinctive n-grams are ranked with weighted log-odds \cite{Monroe_2008}.
+
+\subsection{Calibration and thresholds}
+For each detector and training run we fit three calibrators on the validation split: Platt scaling (logistic
+regression on the logit of the score) \cite{Platt_1999}, temperature scaling (a single divisor of the logit chosen by
+validation log-loss) \cite{Guo_2017} and isotonic regression \cite{Zadrozny_2002}. Because the Coordinator is itself
+fitted on the validation split, its calibrators use out-of-fold stacked scores from a five-fold split grouped by
+source. Probability quality is measured on the test sets with the Brier score, the expected calibration error with
+15 equal-width bins \cite{Naeini_2015} and the negative log-likelihood, and shown in reliability diagrams
+(Fig.~\ref{fig:reliability}).
+
+Five decision rules are compared, all set on validation data: the fixed threshold 0.5; the threshold with the best
+validation F1; a \emph{pseudo-unseen} threshold with the best F1 on validation texts of local generators that are
+neither in the training set nor the test generator; and two \emph{human-quantile} thresholds, the 99th and 95th
+percentiles of validation human scores, which aim at a 1\% or 5\% false positive rate and use no LLM text at all.
+The last two rules assume nothing about the generator met at test time. They do assume that human text at test
+time scores like CISA validation text, and the external publishers test that assumption.
+
+\subsection{Cost}
+Inference time is measured on one laptop RTX~4060 (8~GB) for a fixed sample of test texts, with three repetitions
+and nothing else running on the GPU. The LLM judge is timed on a smaller sample. Training time is logged in every
+run. The Coordinator's cost is the sum of its members run one after another.
+
+\subsection{Error analysis}\label{sec:errors}
+False negatives (LLM texts scored as human) are taken from models trained on one local generator, over all seeds,
+because that is where D is missed. False positives (human texts scored as LLM) are taken from the same models for
+CISA and from the pooled ABC models for the vendor excerpts, because that is where the false alarms occur. For
+every text we compute length, MTLD, type-token ratio, proper-noun and pronoun shares, first-person pronouns
+(\emph{we, our, us, ours}), agency names, advice terms, technical identifiers (file names, CVE numbers, addresses,
+ATT\&CK identifiers) that the Analyst facts do not contain, and the rate of \emph{cues}: occurrences per 100 words
+of the word n-grams among the 30 terms with the largest positive and the 30 with the largest negative weight in
+Lexical-LR trained on A (\NCueLlm{} and \NCueHuman{} of them are word n-grams).
+
+Three analyses use these properties. First, each error is assigned to one category by the first rule that applies,
+and the share of every category among the errors is reported next to its share among all texts of the same group.
+Without the second number a category that merely describes the generator would look like a cause. Second,
+misclassified texts are compared with correctly classified ones property by property (Mann-Whitney U, Cliff's
+$\delta$, Benjamini-Hochberg), after averaging each text over runs so that a text missed in every run is not counted
+nine times. Third, a logistic regression of the error indicator on standardized properties, with standard errors
+clustered by source, estimates which properties change the odds of an error when the others are held fixed. One
+author defined the rules, and they were not validated by a second annotator.
+
+\section{Results}\label{sec:results}
+\input{../tables/en/data.tex}
+\subsection{Linguistic differences}
+Table~\ref{tab:data} and Fig.~\ref{fig:boxes} summarize the corpus. Of the \NTests{} generator-feature comparisons,
+\NLargeEffects{} show a large effect ($|\delta| \geq 0.474$) after Benjamini-Hochberg correction. Lexical diversity
+differs most consistently. The median MTLD is \MedMtldHuman{} for the CISA excerpts and between \MedMtldA{} and
+\MedMtldD{} for the generators, and the hapax ratio is higher for every generator ($\delta$ from \HapaxDeltaMin{} to
+\HapaxDeltaMax{}). LLM texts repeat fewer bigrams and use fewer proper nouns. The human excerpts name agencies,
+products, files and dates again and again, while the generators restate the same facts in general terms. The local
+generators also write short texts (median \MedWordsA{}, \MedWordsB{} and \MedWordsC{} words against
+\MedWordsHuman{}), whereas D and E match the human length (\MedWordsD{} and \MedWordsE{}). The log-odds ranking
+points the same way. LLM texts over-use \emph{our}, \emph{we}, \emph{potential}, \emph{to mitigate} and
+\emph{defenders should}, the vocabulary of advice addressed to a reader. The CISA excerpts over-use \emph{CISA},
+\emph{FBI}, \emph{see} and \emph{note}, the vocabulary of attribution and cross-reference. H1 holds for all five
+generators at the level of single features.
+
+The two vendor publishers sit between CISA and the generators on some of these features. Against CISA, Microsoft
+and Mandiant excerpts use more pronouns ($\delta = \PubMicrosoftPosPronDelta$ and $\PubMandiantPosPronDelta$) and
+fewer proper nouns ($\delta = \PubMicrosoftPosPropnDelta$ and $\PubMandiantPosPropnDelta$), the direction in which
+LLM text differs from CISA. \NPubLarge{} of \NPubTests{} publisher-feature comparisons show a large effect.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{feature_boxes.pdf}
+\caption{Selected stylometric features for CISA excerpts and the five generators (multi-agent texts).}
+\label{fig:boxes}
+\end{figure*}
+
+\input{../tables/en/main.tex}
+\subsection{In-generator and cross-generator detection}
+Table~\ref{tab:main} gives the main result for models trained on one generator. In-generator detection is close to
+perfect for the lexical baselines (F1 \FoneInLexLR{}), RoBERTa (\FoneInTrans{}) and the Coordinator
+(\FoneInCoord{}). Moving to another local generator costs little. Lexical-LR falls to \FoneCrossLexLR{} and RoBERTa
+to \FoneCrossTrans{}, and leave-one-out training on two generators gives similar values (Lexical-LR \LooLexLR{},
+RoBERTa \LooTrans{}). Gemini (E) is detected almost as well by these detectors. The large drop is on gpt-oss-120b
+(D). Lexical-LR falls to \FoneDLexLR{} (95\% CI [\FoneDLoLexLR{}, \FoneDHiLexLR{}]) and Lexical-SVM to
+\FoneDLexSVM{}, while RoBERTa keeps \FoneDTrans{} ([\FoneDLoTrans{}, \FoneDHiTrans{}]) and the Coordinator
+\FoneDCoord{} ([\FoneDLoCoord{}, \FoneDHiCoord{}]). Fig.~\ref{fig:heatmap} shows every training set.
+
+Lexical-LR still ranks the D texts above the human ones (AUC \AucDLexLR{}), but at the fixed threshold it finds
+only \ThrDLexlrFixedRecall{} of them. In Fig.~\ref{fig:ecdf} the D scores form a band of their own between the
+human excerpts and the local generators, mostly below 0.5, so a lower threshold would separate them from the human
+texts. Training on more generators moves the boundary. With two generators Lexical-LR reaches F1
+\PoolTwoDLexLR{} on D, and with all three \PoolDLexLR{}. RoBERTa reaches \PoolDTrans{} and the Coordinator
+\PoolDCoord{} with three.
+
+The two training-free detectors are well below the supervised ones even in-generator (AUC \AucInFast{} for
+Fast-DetectGPT and \AucInBino{} for Binoculars), and their ranking degrades on the larger generators (AUC on D
+\AucDFast{} and \AucDBino{}, on E \AucEFast{} and \AucEBino{}). The LLM Judge is close to chance (F1
+\FoneInJudge{}). Its in-generator AUC of \AucInJudge{} is below 0.5 because it rates \JudgeHumanFlag{} of the CISA
+test excerpts as AI-written, more than it does for the texts of some generators.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{cross_generator_heatmap.pdf}
+\caption{F1 for every training set (rows) and test generator (columns), mean over three seeds. D and E are never
+used for training.}
+\label{fig:heatmap}
+\end{figure*}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{score_ecdf.pdf}
+\caption{Cumulative distribution of P(LLM) for models trained on A. Human excerpts (dashed) and each generator's
+texts; the vertical line is the fixed threshold.}
+\label{fig:ecdf}
+\end{figure}
+
+\input{../tables/en/required.tex}
+Pooled over runs, the F1 lost by moving from the training generator to another local generator is
+\HpCrossLexLR{} for Lexical-LR (95\% CI [\HpLoCrossLexLR{}, \HpHiCrossLexLR{}]) and \HpCrossTrans{} for RoBERTa
+([\HpLoCrossTrans{}, \HpHiCrossTrans{}]). After Holm correction the loss is significant for \HpSigCross{} of the
+\HpNCross{} trained and training-free detectors, RoBERTa and Binoculars being the exceptions. On D the loss is
+\HpDLexLR{} for Lexical-LR, \HpDTrans{} for RoBERTa and \HpDCoord{} for the Coordinator, and it is significant for
+all \HpND{} detectors. On E it is significant for \HpSigE{} of \HpNE{}, and neither RoBERTa nor the Coordinator
+loses measurably. Tested run by run, \HoneSigCross{} of \HoneNCross{} local comparisons and \HoneSigExt{} of
+\HoneNExt{} comparisons on D and E remain significant after Benjamini-Hochberg correction. Exact McNemar tests on
+single test sets agree with this picture. After Holm correction RoBERTa differs from Lexical-LR on \McTransLexSig{}
+of \McTransLexN{} test sets, the Coordinator from Lexical-LR on \McCoordLexSig{} and the Coordinator from RoBERTa
+on \McCoordTransSig{}.
+
+Table~\ref{tab:required} reports every metric for the required setting, training on Human + A, and
+Fig.~\ref{fig:cm} shows the Coordinator's confusion matrices for seed 42. On A it makes \CmAFP{} false positive and
+\CmAFN{} false negatives (TP \CmATP{}, TN \CmATN{}). On D it still makes \CmDFP{} false positive but misses
+\CmDFN{} of \the\numexpr\CmDTP+\CmDFN\relax{} LLM texts. In a CTI pipeline the false negative is the costly error.
+A missed fabricated report enters the knowledge base and is shared onward as intelligence, while a false positive
+costs an analyst a second look.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{confusion_coordinator.pdf}
+\caption{Coordinator trained on Human + A (seed 42), tested on each generator.}
+\label{fig:cm}
+\end{figure*}
+
+\input{../tables/en/publishers.tex}
+\subsection{Publisher shift}
+The models that handle D best raise false alarms on vendor writing (Table~\ref{tab:publishers}). Trained on CISA
+and the three local generators, Lexical-LR flags \PubMicrosoftLexlrFpr{} of Microsoft and \PubMandiantLexlrFpr{} of
+Mandiant excerpts as LLM-written, against \PubCisaLexlrFpr{} of CISA test excerpts. For RoBERTa the rates are
+\PubMicrosoftTransFpr{} and \PubMandiantTransFpr{} against \PubCisaTransFpr{}. The Coordinator is lower
+(\PubMicrosoftCoordFpr{} and \PubMandiantCoordFpr{}). On vendor excerpts paired with their own LLM versions all
+three still reach an AUC of \PubMicrosoftTransAuc{}, so the vendor human texts are scored above the threshold but
+below their LLM versions.
+
+The false alarms grow with the number of generators in training. Lexical-LR trained on one generator flags
+\PoolfprOneMicrosoftLexlr{} of Microsoft and \PoolfprOneMandiantLexlr{} of Mandiant excerpts, on two generators
+\PoolfprTwoMicrosoftLexlr{} and \PoolfprTwoMandiantLexlr{}, and on three the values above. RoBERTa goes from
+\PoolfprOneMicrosoftTrans{} and \PoolfprOneMandiantTrans{} to \PoolfprTwoMicrosoftTrans{} and
+\PoolfprTwoMandiantTrans{} with two. The pooling that recovers D in the previous subsection is therefore the same
+step that produces the vendor false alarms. A model that has seen three ways of writing LLM text draws a wider
+region around ``LLM'', and human text that is unlike CISA falls into it.
+
+Adding one vendor publisher to training removes most of the problem on the other. The false positive rate on
+Microsoft falls to \PubMicrosoftLexlrFprAug{} (Lexical-LR), \PubMicrosoftTransFprAug{} (RoBERTa) and
+\PubMicrosoftCoordFprAug{} (Coordinator), and on Mandiant to \PubMandiantLexlrFprAug{}, \PubMandiantTransFprAug{}
+and \PubMandiantCoordFprAug{}. The training-free detectors behave the other way round. Their false positive rate is
+lower on vendor text than on CISA text (Binoculars \PubMicrosoftBinoFpr{} and \PubMandiantBinoFpr{} against
+\PubCisaBinoFpr{}; Fast-DetectGPT \PubMicrosoftFastFpr{} and \PubMandiantFastFpr{} against \PubCisaFastFpr{}). A
+scoring language model has no notion of CISA's style, so vendor prose does not look unusual to it.
+Section~\ref{sec:erranalysis} examines which vendor excerpts are flagged.
+
+\input{../tables/en/robustness.tex}
+\subsection{Rewriting, prompt strategy and partial generation}
+Rewriting an LLM text with an LLM does not hide it from the trained detectors (Table~\ref{tab:robustness}).
+Paraphrasing by the same model, by another model or twice, back-translation and the ``humanize'' prompt all leave
+the recall of Lexical-LR, RoBERTa and the Coordinator at \RecBacktranslateTrans{} or above. The Writer-only drafts
+are detected as well as the edited texts, so the Editor does not change what these detectors respond to. The
+few-shot prompt, which shows two human excerpts to the Writer, lowers recall slightly (Lexical-LR
+\RecPromptFewshotLexlr{}, RoBERTa \RecPromptFewshotTrans{}, Coordinator \RecPromptFewshotCoord{}). The
+training-free detectors are affected. Paraphrasing lowers the recall of Fast-DetectGPT from
+\RecBaseParaphraseSelfFast{} to \RecParaphraseSelfFast{} and that of Binoculars from \RecBaseParaphraseSelfBino{}
+to \RecParaphraseSelfBino{}, and back-translation lowers Binoculars to \RecBacktranslateBino{}, as reported for
+likelihood-based detectors on general text \cite{Krishna_2023}. Both also detect the Writer's unedited drafts
+better than the final texts (\RecWriterOnlyFast{} and \RecWriterOnlyBino{}), so the Editor pass makes the output
+less predictable to a scoring model.
+
+Single-agent rewriting, in which the model reads the human excerpt and rewrites it, does hide LLM text. Recall
+falls to \RecSingleLexlr{} (Lexical-LR), \RecSingleTrans{} (RoBERTa) and \RecSingleCoord{} (Coordinator), against
+\RecBaseSingleLexlr{} on multi-agent texts of the same model and excerpts. The test sets are small, \NSingleTest{}
+single-agent texts over the three generators and seeds, which shows in the standard deviations of
+Table~\ref{tab:robustness}. These are the texts that share a quarter to a third of their word trigrams with the
+source (Section~\ref{sec:why}).
+
+Partly generated texts are the hardest case (Fig.~\ref{fig:mix}). With a quarter of the words from the LLM, recall
+is \RecMixTwoFiveLexlr{}, \RecMixTwoFiveTrans{} and \RecMixTwoFiveCoord{}, and with half of them
+\RecMixFiveZeroLexlr{}, \RecMixFiveZeroTrans{} and \RecMixFiveZeroCoord{}. For RoBERTa the position of the LLM
+block decides. At 50\% it finds \PosMixFiveZeroFirstTrans{} of the texts that begin with the LLM block and
+\PosMixFiveZeroLastTrans{} of those that end with it, because it reads only the first 256 tokens. Lexical-LR, which
+reads the whole text, finds \PosMixFiveZeroFirstLexlr{} and \PosMixFiveZeroLastLexlr{}. The Coordinator follows
+RoBERTa (\PosMixFiveZeroFirstCoord{} and \PosMixFiveZeroLastCoord{}).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{mix_recall.pdf}
+\caption{Recall on partly generated texts against the share of LLM words, models trained on CISA + ABC.}
+\label{fig:mix}
+\end{figure}
+
+\input{../tables/en/augmented.tex}
+Training on these conditions helps where the base models failed (Table~\ref{tab:augmented}). Adding paraphrased and
+single-agent texts of the training sources raises recall on single-agent test texts from \AugMainSingleLexlr{} to
+\AugAugRewriteSingleLexlr{} (Lexical-LR) and from \AugMainSingleTrans{} to \AugAugRewriteSingleTrans{} (RoBERTa),
+and on D from \AugMainDLexlr{} to \AugAugRewriteDLexlr{} and from \AugMainDTrans{} to \AugAugRewriteDTrans{},
+although no D text was added. The Coordinator gains less (\AugMainSingleCoord{} to \AugAugRewriteSingleCoord{} on
+single-agent texts).
+
+\input{../tables/en/calibration.tex}
+\input{../tables/en/thresholds.tex}
+\subsection{Calibration and decision thresholds}
+In-generator, calibration on validation data improves the probabilities. The expected calibration error of
+Lexical-LR falls from \CalLexlrRawInEce{} (raw) to \CalLexlrPlattInEce{} with Platt scaling
+(Table~\ref{tab:calibration}). Under generator shift the probabilities get worse. On D, the negative
+log-likelihood of Lexical-LR rises from \CalLexlrRawDNll{} (raw) to \CalLexlrPlattDNll{} (Platt) and
+\CalLexlrIsotonicDNll{} (isotonic), and that of RoBERTa from \CalTransRawDNll{} to \CalTransPlattDNll{} and
+\CalTransIsotonicDNll{}. The calibrators learn from validation data that the scores are reliable and sharpen them,
+and on D the sharpened scores are wrong (Fig.~\ref{fig:reliability}). Temperature scaling, which can only soften or
+sharpen all scores together, harms RoBERTa least (NLL \CalTransTemperatureDNll{}). The effect on decisions at 0.5
+is mixed. Platt scaling moves the boundary of Lexical-LR enough to raise its F1 on D from \CalfoneLexlrRawD{} to
+\CalfoneLexlrPlattD{}, and it lowers that of RoBERTa from \CalfoneTransRawD{} to \CalfoneTransPlattD{}. Calibration
+on in-distribution data is thus neither a reliable repair for the decision nor a safe one for the probabilities.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.9\textwidth]{reliability.pdf}
+\caption{Reliability of raw (top) and Platt-scaled (bottom) probabilities, models trained on A. Points are bins with
+at least five texts; the dashed diagonal is perfect calibration.}
+\label{fig:reliability}
+\end{figure*}
+
+The threshold matters more than the calibrator (Table~\ref{tab:thresholds}, Fig.~\ref{fig:sweep}). Choosing the
+threshold with the best validation F1 is an unreliable fix, because the validation texts come from the training
+generator. It raises Lexical-LR on D only to \ThrDLexlrValfFOne{} and lowers RoBERTa to \ThrDTransValfFOne{}. The
+pseudo-unseen rule, which tunes the threshold on another local generator, raises the F1 of Lexical-LR on D from
+\ThrDLexlrFixedFOne{} to \ThrDLexlrPseudoFOne{}. The two human-quantile rules, which use no LLM text at all, raise
+it to \ThrDLexlrHumoneFOne{} (1\% target) and \ThrDLexlrHumfiveFOne{} (5\% target), and that of the Coordinator
+from \ThrDCoordFixedFOne{} to \ThrDCoordHumoneFOne{} and \ThrDCoordHumfiveFOne{}. RoBERTa, whose D scores were
+already mostly above 0.5, gains less (\ThrDTransFixedFOne{} to \ThrDTransHumfiveFOne{}).
+
+The cost shows on the other publishers. Table~\ref{tab:thresholds} is computed for models trained on one
+generator, which at the fixed threshold flag only \ThrExternalLexlrFixedFpr{} (Lexical-LR) and
+\ThrExternalCoordFixedFpr{} (Coordinator) of the vendor excerpts, far fewer than the pooled models of
+Table~\ref{tab:publishers}. With the 5\% rule these rates rise to \ThrExternalLexlrHumfiveFpr{} and
+\ThrExternalCoordHumfiveFpr{}. Vendor human texts score higher than CISA ones, so a quantile of CISA scores lets
+more of them through. Of the five rules, those that recover most of D also raise false alarms on vendor text the
+most, which is the trade already seen for pooled training.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{threshold_sweep.pdf}
+\caption{Precision, recall and F1 on D against the decision threshold, models trained on A; the dashed line is 0.5.}
+\label{fig:sweep}
+\end{figure}
+
+\input{../tables/en/coordinator.tex}
+\subsection{When the Coordinator helps}
+Table~\ref{tab:coordinator} compares the Coordinator with RoBERTa in all \GapN{} scenarios. RoBERTa is the
+reference because it is the member that loses least under shift. In-generator, Lexical-SVM is as good as the
+Coordinator (Table~\ref{tab:main}). The Coordinator is better than RoBERTa in \GapWins{} scenarios and worse in
+\GapLosses{} (Holm-adjusted $p<0.05$). The gains are small where both are near the ceiling (in-generator
+\GapInGenerator{}, leave-one-out \GapLeaveOneOut{}, the paraphrase conditions) and larger on vendor text (Microsoft
+\GapMicrosoftAbc{}, Mandiant \GapMandiantAbc{}), where its lower false positive rate counts. The losses are the
+shifts that change the evidence most: texts with a quarter of LLM words (\GapTwoFiveLlmAbc{}), D after training on
+one generator (\GapDOneGenerator{}, 95\% CI [\GapLoDOneGenerator{}, \GapHiDOneGenerator{}]), single-agent texts
+(\GapSingleAgentAbc{}), texts with half LLM words (\GapFiveZeroLlmAbc{}) and D after training on all three
+(\GapDAbc{}).
+
+On validation data, the stack weights Lexical-SVM (\WgtLexsvm{}) and RoBERTa (\WgtTrans{}) most, then Stylometry
+(\WgtStylo{}) and Lexical-LR (\WgtLexlr{}). The LLM Judge gets a negative weight (\WgtJudge{}). On D, the mean
+logit of Lexical-SVM collapses, and weighted by its coefficient it accounts for \DropLexsvm{} logit units of the
+Coordinator's drop, against \DropTrans{} for RoBERTa and \DropStylo{} for Stylometry. Weights fitted on the training
+generator thus put most trust in a member that fails on D. Selecting the single best member on validation does
+worse (F1 on D \ScDOneGeneratorBestVal{}; the member chosen most often is \BestValTop{}), the unweighted mean of
+logits does slightly better (\ScDOneGeneratorCoordMean{}), and a stack fitted on validation texts of local
+generators absent from training does best (\ScDOneGeneratorCoordUnseen{}). None reaches RoBERTa alone
+(\ScDOneGeneratorTrans{}). Adding the two zero-shot detectors as members changes little
+(\ScDOneGeneratorCoordZero{}). Removing RoBERTa from the Coordinator lowers its F1 on D to \CoordNoTransD{}, and
+removing any other member changes it by at most \CoordDropMaxOther{} (Table~\ref{tab:ablation}).
+
+\input{../tables/en/ablation.tex}
+\subsection{Ablations}
+Masking agency names leaves Lexical-LR almost unchanged (\AblLrMaskedIn{} in-generator, \AblLrMaskedCross{} cross),
+so the detectors do not depend on the word \emph{CISA} although it tops the log-odds list. Switching off output
+cleaning changes nothing (\AblLrNoCleanIn{}).
+
+The length-matched subset keeps LLM texts within 20\% of the length of their human excerpt. Generator A almost
+never writes that long (about \LenAN{} such texts per test split), so we report B and C, with \LenBN{} and
+\LenCN{} texts per split. The lexical detectors and RoBERTa are unaffected (Lexical-LR \LenBLexLR{} and
+\LenCLexLR{}, RoBERTa \LenBTrans{} and \LenCTrans{}). Stylometry falls from \SameBStylo{} to \LenBStylo{} on B and
+from \SameCStylo{} to \LenCStylo{} on C. Length therefore carries part of the stylometric signal for the short
+generators, most clearly for B, and these subsets are small. The feature groups give the same answer on a larger
+sample. Length and punctuation features reach \AblGroupLengthIn{} and \AblGroupPunctuationIn{} in-generator but
+\AblGroupLengthD{} and \AblGroupPunctuationD{} on D, which matches human length, while lexical diversity alone gives
+\AblGroupLexicalD{} on D, more than the full stylometric model (\AblStylometryD{}).
+
+Holding one Writer template out of training lowers the recall of Lexical-LR on that template to between
+\TplRecallMin{} and \TplRecallMax{}, depending on the template, while its AUC stays at \TplAucMin{}. No single
+template is needed to rank the texts, but the templates are not interchangeable at a fixed threshold. Across
+topics, recall of the Coordinator on the other local generators stays between \TopicCrossMin{} and
+\TopicCrossMax{}. On D it is lowest for vulnerability and APT reports (\TopicDVulnerability{} and \TopicDApt{}) and
+highest for the small ``other'' group (\TopicDOther{}).
+
+\input{../tables/en/cost.tex}
+\subsection{Cost}
+Inference cost ranges from \MsLexLR{}~ms per text for Lexical-LR to \MsJudge{}~ms for the LLM Judge
+(Table~\ref{tab:cost}). RoBERTa needs \MsTrans{}~ms on the GPU, Fast-DetectGPT \MsFast{}~ms and Binoculars
+\MsBino{}~ms. Run one member after another, the Coordinator costs \MsCoord{}~ms per text, almost all of it the
+Judge. Without the Judge it costs \MsCoordNoJudge{}~ms. The Judge's negative stacking weight and the near-zero
+effect of removing it mean that this time buys nothing in our data.
+
+\input{../tables/en/profile.tex}
+\input{../tables/en/errors.tex}
+\input{../tables/en/contrast.tex}
+\input{../tables/en/examples.tex}
+\subsection{Error analysis}\label{sec:erranalysis}
+\emph{What the categories show.} Table~\ref{tab:errors} gives the error categories with their base rates. Of the D
+texts that Lexical-LR misses, \ErrFnDImpersonalHumanLengthLexlr{} are impersonal and of human length, but so are
+\ErrbaseFnDImpersonalHumanLength{} of all D texts. The category describes how D writes and does not single out the
+misses. The same holds for D texts that name an agency. Two categories do depart from their base rate. D texts in
+the first person are missed less often than the others (Lexical-LR misses \ErrRateFnDFirstPersonStillMissedLexlr{}
+of them against \ErrRateFnDImpersonalHumanLengthLexlr{} of the impersonal ones). Texts that contain technical
+identifiers absent from the Analyst facts are missed more often. They are \ErrbaseFnDUnsupportedTechnicalDetail{}
+of the D texts and \ErrFnDUnsupportedTechnicalDetailTrans{} of RoBERTa's misses, and RoBERTa misses
+\ErrRateFnDUnsupportedTechnicalDetailTrans{} of them against \ErrRateFnDImpersonalHumanLengthTrans{} of the
+impersonal ones. This group is small (\ErrNFnDUnsupportedTechnicalDetailLexlr{} run-level cases) and the rule is a
+pattern match that also fires on harmless expansions (Table~\ref{tab:examples}), so we read it as an indication:
+a text that spells out file names and identifiers looks more like a human advisory to these detectors. For the other generators the few misses concentrate on
+texts that name an agency (\ErrbaseFnOtherGeneratorsCitesAnAgency{} of the texts,
+\ErrFnOtherGeneratorsCitesAnAgencyTrans{} of RoBERTa's misses).
+
+\emph{Missed against caught D texts.} Table~\ref{tab:contrast} compares the D texts that at least half of the runs
+miss with the rest (\FnNLexLR{} against \TpNLexLR{} texts for Lexical-LR, \FnNTrans{} against \TpNTrans{} for
+RoBERTa). Missed texts are longer ($\delta = \FnDeltaLexlrNWords$ for Lexical-LR, $\FnDeltaTransNWords$ for RoBERTa,
+$\FnDeltaCoordNWords$ for the Coordinator) and less diverse (type-token ratio $\delta = \FnDeltaLexlrTtr$,
+$\FnDeltaTransTtr$ and $\FnDeltaCoordTtr$). For Lexical-LR and the Coordinator they also contain more proper nouns
+($\delta = \FnDeltaLexlrPosPropn$ and $\FnDeltaCoordPosPropn$), which is not the case for RoBERTa
+($\FnDeltaTransPosPropn$). The largest single contrast for Lexical-LR is the cue rate. Missed texts carry fewer of
+the n-grams the model associates with LLM text ($\delta = \FnDeltaLexlrCuesLlm$) and more of those it associates
+with human text ($\delta = \FnDeltaLexlrCuesHuman$). In the regression, one standard deviation more length
+multiplies the odds of a miss by \OrLexlrNWords{} for Lexical-LR (95\% CI [\OrLoLexlrNWords{},
+\OrHiLexlrNWords{}]), \OrTransNWords{} for RoBERTa and \OrCoordNWords{} for the Coordinator. A higher proper-noun
+share raises them for Lexical-LR (\OrLexlrPosPropn{}) and the Coordinator (\OrCoordPosPropn{}) but not clearly for
+RoBERTa (\OrTransPosPropn{}, [\OrLoTransPosPropn{}, \OrHiTransPosPropn{}]). Higher MTLD lowers the odds for all
+three (\OrLexlrMtld{}, \OrTransMtld{}, \OrCoordMtld{}). The top row of Fig.~\ref{fig:errbins} shows the same
+relations as miss rates by tertile.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.92\textwidth]{error_by_bin.pdf}
+\caption{Error rate by tertile of a text property (mean and standard deviation over seeds). Top: share of D texts
+missed by models trained on one generator. Bottom: share of Microsoft and Mandiant human excerpts flagged by models
+trained on ABC.}
+\label{fig:errbins}
+\end{figure*}
+
+\emph{Why D is missed and E is not.} D and E are both large models and both match the human length, so length does
+not explain the difference between them. Table~\ref{tab:profile} points to voice and vocabulary. First-person
+pronouns occur in \ProfpctDFirst{} of the D texts, fewer than in the CISA excerpts (\ProfpctHumanFirst{}), and in
+\ProfpctEFirst{} of the E texts, which is the range of the local generators (\ProfpctBFirst{} to
+\ProfpctCFirst{}). The n-grams that Lexical-LR weights towards LLM occur \ProfDCuesLlm{} times per 100 words in D,
+\ProfECuesLlm{} in E and between \ProfCCuesLlm{} and \ProfACuesLlm{} in the local generators (CISA:
+\ProfHumanCuesLlm{}). D also uses more of the human-side n-grams than any other generator (\ProfDCuesHuman{}). E
+writes at human length but keeps the \emph{we} and \emph{our} of the smaller models and their advice vocabulary,
+and a detector trained on those models recognizes it. D writes impersonally, repeats identifiers and does not
+address the reader. What still marks it as LLM text is its lexical diversity (median MTLD \MedMtldD{} against
+\MedMtldHuman{} for CISA), which is why the lexical-diversity features alone detect D better than the full
+stylometric model and why the least diverse D texts are the ones missed. The Writer template matters as well.
+Lexical-LR misses \DmissIncidentLexlr{} of the D texts written from the incident-report template and
+\DmissSocLexlr{} of those from the SOC-bulletin template, and RoBERTa \DmissBlogTrans{} from the vendor-blog
+template against \DmissSocTrans{}. The sampling temperature does not (\DmisstempLowLexlr{} at 0.7 and
+\DmisstempHighLexlr{} at 1.0 for Lexical-LR).
+
+\emph{False positives.} On CISA test excerpts Lexical-LR makes no false positive and RoBERTa makes
+\ErrtotalFpCisaTrans{} over all runs: \ErrNFpCisaFirstPersonTrans{} excerpts written in the first person,
+\ErrNFpCisaProductVulnerabilityNoticeTrans{} product vulnerability notices, \ErrNFpCisaFewProperNounsTrans{} with
+few proper nouns and \ErrNFpCisaOtherTrans{} other. These counts are too small for more than a description. The
+vendor excerpts give enough cases (\ErrtotalFpVendorsLexlr{} run-level false positives for Lexical-LR,
+\ErrtotalFpVendorsTrans{} for RoBERTa, \ErrtotalFpVendorsCoord{} for the Coordinator). Vendor blogs write in the
+first person as a rule (\ProfpctMicrosoftFirst{} of Microsoft and \ProfpctMandiantFirst{} of Mandiant excerpts
+against \ProfpctHumanFirst{} for CISA), and the first-person category is over-represented among the false alarms
+(\ErrFpVendorsFirstPersonLexlr{} for Lexical-LR and \ErrFpVendorsFirstPersonTrans{} for RoBERTa against a base
+rate of \ErrbaseFpVendorsFirstPerson{}). Table~\ref{tab:contrast} and the bottom row of Fig.~\ref{fig:errbins}
+show which excerpts are flagged. They are more diverse (MTLD $\delta = \FpDeltaLexlrMtld$, $\FpDeltaTransMtld$ and
+$\FpDeltaCoordMtld$), use the first person more often per 100 words ($\FpDeltaLexlrFirstRate$ and
+$\FpDeltaTransFirstRate$), carry more LLM-side cues ($\FpDeltaLexlrCuesLlm$ and $\FpDeltaTransCuesLlm$) and, for
+Lexical-LR and the Coordinator, are shorter ($\FpDeltaLexlrNWords$ and $\FpDeltaCoordNWords$). The overall pronoun
+share, which separates vendors from CISA at the corpus level, does not separate flagged from passed vendor excerpts
+($\FpDeltaLexlrPosPron$ and $\FpDeltaTransPosPron$), and the proper-noun share does so only for RoBERTa
+($\FpDeltaTransPosPropn$). In the regression, one standard deviation more first-person use multiplies the odds of
+a false alarm by \FpOrLexlrFirstRate{} for Lexical-LR (95\% CI [\FpOrLoLexlrFirstRate{}, \FpOrHiLexlrFirstRate{}])
+and \FpOrTransFirstRate{} for RoBERTa, and one standard deviation more MTLD by \FpOrLexlrMtld{},
+\FpOrTransMtld{} and \FpOrCoordMtld{} for the Coordinator.
+
+\emph{Examples.} Table~\ref{tab:examples} shows six confident errors. The first D text is counted as adding an
+identifier because it writes \texttt{certutil.exe} where the facts say CertUtil, which shows how coarse that rule
+is. The second expands the acronym SVR as ``Federal Security
+Service'', the name of a different Russian agency (the FSB), an error of content that a style detector cannot see.
+The two CISA false positives are a joint advisory written as \emph{we} and a narrative summary with few names.
+
+Taken together, the two kinds of error are mirror images. The LLM texts that are missed are long, impersonal, rich
+in proper nouns and low in lexical diversity, the profile of a CISA excerpt. The human texts that are flagged are
+shorter, written in the first person and lexically diverse, the profile of the training generators.
+
+\section{Discussion}\label{sec:discussion}
+\subsection{Answers to the research questions}
+\emph{Q1, linguistic differences.} LLM CTI has higher lexical diversity, repeats fewer bigrams, names fewer
+entities and gives more advice to the reader. Human CTI repeats identifiers and cites other documents. This agrees
+with the GLTR observation that generated text avoids the long tail of specific tokens \cite{Gehrmann_2019}. Not all
+of these features describe human authorship as such. First-person voice separates CISA from the small generators
+and from the vendor blogs alike, so it describes CISA's house style. Lexical diversity is the more general
+difference. The three human publishers lie close together on MTLD and generators B to E lie well above them,
+while A, the least diverse generator, overlaps with the vendor blogs (Table~\ref{tab:profile}).
+
+\emph{Q2, baselines against the transformer.} In-generator, a TF-IDF baseline is as good as RoBERTa. The difference
+appears under shift. On D, RoBERTa keeps an F1 of \FoneDTrans{} against \FoneDLexLR{}, and it does not need agency
+names to do so (\AblTransformerMaskedD{} with names masked). Pre-trained representations seem to capture properties
+of LLM prose beyond the n-grams of the training generators, as the supervised RoBERTa detectors for GPT-2 did
+\cite{Solaiman_2019}. The training-free detectors, which need no CTI data, rank texts far worse than any trained
+model here. With a 2.7B scoring model and 4-bit 7B models they are weaker than in their authors' settings, and
+they are also \RelFast{} and \RelBino{} times slower than RoBERTa.
+
+\emph{Q3 and Q4, generator style and cross-generator testing.} Among the three 7--8B local models, cross-generator
+F1 stays near the in-generator value, so the detectors do not learn the style of one model only. Part of what they
+learn is specific to how small models write CTI: short, in the first person, with advice to the reader. Gemini
+writes longer but keeps that voice and is detected. gpt-oss-120b drops it and is missed by the lexical models,
+whose AUC nevertheless stays high. This is the pattern reported by M4 and RAID, where detectors label text from
+unseen generators as human \cite{Wang_2024,Dugan_2024}. Our threshold results locate it in the decision, and the
+error analysis names the properties involved.
+
+\emph{Q5, important features.} The stylometric model splits mostly on length (top feature: \TopFeature{}) and
+proper-noun share, the lexical model on pronouns, hedging words and agency names. The length cue does not transfer
+to larger generators. The lexical-diversity cue does, and within D the misses are the long texts with low
+diversity and many proper nouns.
+
+\emph{Q6, topics and attack types.} Among local generators recall does not depend on the topic. On D,
+vulnerability and APT reports are missed more often than phishing and ransomware reports
+(\TopicDVulnerability{} and \TopicDApt{} against \TopicDPhishing{} and \TopicDRansomware{}). A possible reason is
+that the facts of such reports are mostly actor, product and CVE names, which raise the proper-noun share of the
+generated text. The topic labels come from keyword rules and the standard deviations across runs are large, so we
+read this as a tendency.
+
+\emph{Q7, changes in LLM technology.} The detectors trained on 2024-era 7--8B models lose most on the larger and
+newer gpt-oss-120b, and they fail on texts produced by a different procedure with the same models, single-agent
+rewriting and sentence-level mixing. Paraphrasing affected the two groups of detectors differently. It lowered the
+recall of the two likelihood-based detectors, as in general-domain studies \cite{Krishna_2023,Sadasivan_2023}, and
+left that of the trained ones unchanged. A plausible reason is that our paraphrasers are the same small
+instruction-tuned models. A paraphrase is then another LLM text with the same habits, which a classifier trained on
+such texts recognizes even when its token probabilities change. A paraphraser trained to evade detection, as in
+RADAR \cite{Hu_2023}, would be a stronger test.
+
+\subsection{Ranking and decision}
+Across generator and publisher shift, the supervised detectors kept an AUC near 1 while F1 or the false positive
+rate moved. A detector that meets new text can usually still order it, and what fails is the boundary fitted to
+the training generators and the training publisher. Calibrating on in-distribution validation data does not repair
+this, in line with Ovadia et al.\ \cite{Ovadia_2019}. The two repairs that do work for an unseen generator, a
+threshold from human scores and training on several generators, both move the boundary towards human text, and
+both are paid for on a publisher the model has not seen. The false positive rate of Lexical-LR on Microsoft
+excerpts goes from \PoolfprOneMicrosoftLexlr{} to \PoolfprThreeMicrosoftLexlr{} when it is trained on three
+generators instead of one. The error analysis says why the two shifts pull in opposite directions. The detectors separate CISA from
+the small generators along length, first-person voice and lexical diversity. An unseen generator that sits near
+CISA on the first two is missed, and an unseen publisher that sits near the generators on the last two is flagged.
+A single boundary on these properties cannot serve both. The remedy that did not have this cost was human text
+from more than one publisher. Adding the excerpts of one vendor to training, \NExtChunksMicrosoft{} or
+\NExtChunksMandiant{} of them with their LLM versions, cut the false positive rate on the other vendor several
+fold.
+
+\subsection{When combining agents helps}
+The stacked Coordinator helps when its members fail in different places, as on vendor text, where its false
+positive rate is less than half that of Lexical-LR or RoBERTa. It falls behind RoBERTa when the member it trusts
+most is the one that fails, as on D after single-generator training. The weights are fitted where all members look
+reliable, so the stack cannot know which member will transfer. Learning the weights under a simulated shift
+recovers part of the loss, which supports this reading. For a deployment, this suggests choosing the combination
+rule on held-out generators and publishers and dropping members, like the LLM Judge here, that add cost and no
+signal.
+
+\subsection{Use in a CTI workflow}
+For triage of incoming reports, a fine-tuned encoder is the best single choice in our data. On a GPU it is about as
+cheap as a TF-IDF model at inference, it keeps most of its recall under generator shift and it is not fooled by
+LLM paraphrasing. Its weaknesses are partial generation, where it sees only the first 256 tokens, and false alarms
+on unfamiliar publishers. Its score should therefore send a report to an analyst and not block it, long reports
+should be scored in windows, and human text from each new source of reports should be added to training before the
+detector is trusted on it. Fabricated reports that copy names and identifiers from a real report, as our
+single-agent texts do, and reports that mix human and generated paragraphs remain the largest gap.
+
+\section{Limitations and Threats to Validity}\label{sec:limits}
+\subsection{Dataset}
+\emph{Training publisher.} All training text comes from CISA, so ``human'' in training also means ``this agency's
+house style''. The Microsoft and Mandiant sets measure how far that bias carries, but they are vendor blogs
+selected by publisher labels and title rules, and \NExtSourcesMicrosoft{} plus \NExtSourcesMandiant{} sources are a
+small sample of vendor writing. Other forms of CTI, such as STIX objects, analyst chat or non-English reports, are
+not covered. \emph{Size.} \NSources{} CISA sources give test splits of about 40 sources per seed, which is why we
+report source-level intervals next to the means. Several subsets are much smaller: the single-agent test texts,
+the length-matched subsets and the error categories with a low base rate. \emph{Dates.} Human authorship rests on
+publication dates on or before 30 November 2022. CISA pages show revision dates, Microsoft metadata were
+overwritten by a site migration and Mandiant posts were moved to a new host, so we date documents by advisory
+codes, URL dates and visible bylines and remove paragraphs that announce later updates. A paragraph revised after
+the cutoff without such a note would go unnoticed. \emph{Excluded pages.} \NBlocked{} CISA analysis reports could
+not be read because the local antivirus flagged embedded malware samples.
+
+\subsection{Generation}
+\emph{Generator coverage.} The three training generators are 7--8B open models from 2024. D and E exist only in
+the multi-agent condition and, apart from texts generated before the quota restriction, only for test excerpts, so
+we cannot train on larger models or test single-agent rewriting and external publishers with them. The contrast
+between D and E rests on one model of each kind. \emph{One pipeline.} All LLM texts come from one set of prompts
+and one Analyst. The single-agent and prompt-strategy conditions show that another procedure changes the results.
+\emph{Fact drift.} Generators sometimes changed or added facts. Such texts were not filtered, and a reader with
+domain knowledge could detect some of them by content. Our measure of added identifiers is a pattern match and
+misses invented narrative. \emph{No human-edited texts.} An attacker could have a person revise an LLM draft. We
+did not collect such texts, and we chose not to simulate them with another LLM, because that would measure LLM
+rewriting again. The sentence-level mixtures approximate a report assembled from human and machine paragraphs, not
+a human edit of machine text, and their LLM label is a convention.
+
+\subsection{Detectors and analysis}
+\emph{Model choice.} RoBERTa is the only fine-tuned encoder and Gemma~2~9B the only judge, and no hyperparameter
+search was done. Binoculars ran in 4-bit precision with a truncated observer distribution, which shifts its
+scores, and Fast-DetectGPT with a single 2.7B model. Both are smaller than the strongest settings of their
+authors, and Ghostbuster could not be run. \emph{Calibration data.} Calibrators and thresholds come from validation
+splits of 20 or so sources per seed. A 99th percentile of some forty human scores is close to their maximum, and
+the 1\% rule realizes false positive rates between \ThrInLexlrHumoneFpr{} and \ThrInTransHumoneFpr{} on CISA test
+text.
+\emph{Error analysis.} The categories are rule-based, defined by one author and not checked by a second annotator.
+The property comparisons and regressions are observational. They show which texts are misclassified and do not
+prove that changing a property would change the decision. The cue lists come from one model trained on A.
+\emph{Statistics.} Bootstrap intervals resample test sources but treat the three seeds and the training generators
+as given, so they do not capture the variance of a different choice of generators. Their $p$-values cannot be
+smaller than $2/2001$.
+
+\section{Conclusion}
+Human and LLM-written CTI differ in measurable ways, and when the generator is known a TF-IDF model is enough to
+separate them. The difficulty starts with text the detector has not seen. In our corpus, where five generators
+write from the same extracted facts, the detectors kept ranking such text correctly and lost the decision: a large
+unseen generator that writes impersonally was scored below the threshold, and vendor blogs written in the first
+person were scored above it. Pooling training generators or setting the threshold from human scores repaired the
+first failure and aggravated the second, and calibration on validation data repaired neither. Human text from a
+second publisher in training was the one remedy without that cost. A stacked combination of detector agents was
+worth its cost on vendor text and fell behind RoBERTa where its most trusted member failed. Rewriting an LLM text
+with an LLM did not hide it from trained detectors, but rewriting from the source and mixing human with generated
+sentences did. The study is limited to one government publisher for training, three small training generators and
+one generation pipeline. Human-edited LLM drafts, larger training generators and windowed scoring of long reports
+are the next steps.
+
+\section*{Reproducibility}
+Code, configuration files, the CISA corpus, all generated texts with every agent message, predictions and result
+tables are in the project repository.\footnote{\url{https://github.com/FurkanDevelops/llm-cti-detection}} Every
+stage runs from one command, \texttt{python -m src.cli <stage> --config <file>}, and
+\texttt{experiments/run\_all.sh} runs them in order. Model names, prompts, sampling temperatures, seeds and
+detector settings are in \texttt{configs/}, and package versions are pinned in \texttt{requirements.txt}. Every
+number in this paper is written by the report stage into a macro file, so the text cannot drift from the results.
+The Microsoft and Mandiant excerpts are rebuilt by the collection script from the listed URLs and checked against
+stored hashes. API generations (D, E) cannot be repeated exactly, so their outputs are stored.
+
+\bibliographystyle{IEEEtran}
+\bibliography{../refs}
+
+\end{document}

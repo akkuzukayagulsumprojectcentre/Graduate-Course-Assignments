@@ -1,0 +1,25 @@
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  box/.style={draw, rounded corners=2pt, align=center, font=\scriptsize, minimum height=6mm, inner sep=2pt},
+  arr/.style={-{Latex[length=1.6mm]}, thin}]
+\node[box] (h) {İnsan parçası\\(yayın $\le$ 30.11.2022)};
+\node[box, right=4mm of h] (an) {Analist\\Llama 3.1 8B};
+\node[box, right=4mm of an] (f) {Olgular\\(JSON)};
+\node[box, above right=0mm and 4mm of f] (w) {Yazar $\rightarrow$ Editör\\üretici A--E};
+\node[box, below right=0mm and 4mm of f] (s) {Yeniden yazımlar,\\tek ajan};
+\draw[arr] (h) -- (an);
+\draw[arr] (an) -- (f);
+\draw[arr] (f.east) -- (w.west);
+\draw[arr] (w.south) -- (s.north);
+\node[box, below=12mm of an, xshift=8mm, text width=0.92\columnwidth]
+  (d) {Lexical-LR \quad Lexical-SVM \quad Stilometri \quad RoBERTa \quad LLM Yargıç};
+\node[box, below=3mm of d] (c) {Koordinatör (doğrulama kümesinde stacking) $\rightarrow$ P(LLM)};
+\draw[arr] (d) -- (c);
+\draw[arr, dashed] (w.south) |- ([yshift=3mm]d.north) -- (d.north);
+\end{tikzpicture}
+\caption{Üretim ajanları (üstte) ve tespit ajanları (altta). Bütün üreticiler aynı Analist olgularından yazar ve insan
+parçasını hiç görmez. Yeniden yazılmış sürümler Yazar--Editör çıktısından başlar; tek ajan koşulu insan parçasını
+doğrudan okur. İnsan parçaları CISA'dan (eğitim ve test) ve Microsoft ile Mandiant'tan (yalnızca test) gelir.}
+\label{fig:pipeline}
+\end{figure}

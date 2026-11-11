@@ -1,0 +1,18 @@
+\begin{table*}[t]
+\centering
+\footnotesize
+\caption{Yüksek güvenle yapılan hatalara örnekler (CISA parçaları ve LLM çıktısı); üretici, uzunluk ve metni yanlış sınıflandıran çalıştırmalardaki ortalama skorla birlikte.}
+\label{tab:examples}
+\begin{tabular}{p{4.2cm}p{12.8cm}}
+\toprule
+Hata & Metnin başı \\
+\midrule
+FN, Koordinatör: olgularda olmayan teknik ayrıntı. Üretici D, 341 kelime, ortalama P(LLM) 0.00 & Malicious cyber actors have been observed deploying the KONNI malware family in campaigns that rely on a classic spear-phishing attachment workflow (ATT\&CK T1566.001). The initial infection vector typically consists of a malicious Microsoft Office document that contains a Visual Basic for Applications (VBA) macro. When the recipient enables macros, the VBA code executes a chain of actions designed to establish\ldots \\
+FN, Koordinatör: kişisiz, insan uzunluğunda. Üretici D, 345 kelime, ortalama P(LLM) 0.07 & The investigation began after the security operations center received an alert that an administrative account in the organization's cloud-based email environment had been used to modify permissions and access a number of privileged mailboxes. Log correlation and forensic analysis quickly revealed activity consistent with tactics employed by Russian Federal Security Service (SVR) cyber-espionage groups. The adversary's foothold was established through\ldots \\
+FN, Lexical-LR: kurum adı geçiyor. Üretici D, 317 kelime, ortalama P(LLM) 0.34 & Malicious cyber actors-most likely advanced persistent threat (APT) groups-have been observed exploiting a series of critical VMware vulnerabilities disclosed in early 2022, specifically CVE-2022-22954, CVE-2022-22960, CVE-2022-22972, and CVE-2022-22973. These flaws enable a server-side template injection (SSTI) that can be leveraged to achieve remote code execution (RCE) on affected VMware products and, in many cases, to elevate privileges to the root\ldots \\
+FN, RoBERTa: birinci şahıs, yine de kaçırıldı. Üretici A, 122 kelime, ortalama P(LLM) 0.15 & Malicious cyber actors, likely advanced persistent threat (APT) actors, have been exploiting critical vulnerabilities affecting VMware products. The vulnerabilities, specifically CVE-2022-22954 and CVE-2022-22960, were addressed by VMware with updates on April 6, 2022. The US Cybersecurity and Infrastructure Security Agency (CISA) added these vulnerabilities to its catalog of Known Exploited Vulnerabilities on April 14 and 15, 2022, respectively. Federal agencies\ldots \\
+FP, RoBERTa: birinci şahıs. CISA, 333 kelime, ortalama P(LLM) 0.61 & Since early 2018, we have observed an increase in JBiFrost RAT being used in targeted attacks against critical national infrastructure owners and their supply chain operators. There has also been an increase in the RAT's hosting on infrastructure located in our countries. In early 2017, Adwind RAT was deployed via spoofed emails designed to look as if they originated from\ldots \\
+FP, RoBERTa: az özel ad. CISA, 309 kelime, ortalama P(LLM) 0.80 & The BeagleBoyz use a variety of tools and techniques to gain access to a financial institution's network, learn the topology to discover key systems, and monetize their access. The technical analysis below represents an amalgamation of multiple known incidents, rather than details of a single operation. These findings are presented to highlight the group's ability to tailor their techniques to\ldots \\
+\bottomrule
+\end{tabular}
+\end{table*}

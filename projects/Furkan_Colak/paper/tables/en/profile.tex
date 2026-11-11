@@ -1,0 +1,20 @@
+\begin{table*}[t]
+\centering
+\footnotesize
+\caption{Mean text properties by source (multi-agent texts for A--E). First person and agency: share of texts with at least one first-person pronoun or agency name. Cues: occurrences per 100 words of the word n-grams with the largest Lexical-LR weights on each side (model trained on A).}
+\label{tab:profile}
+\begin{tabular}{lrrrrrrr}
+\toprule
+Source & Words & MTLD & Proper nouns & First person & Agency named & LLM-side cues & Human-side cues \\
+\midrule
+Human (CISA) & 279 & 86 & 0.118 & 14\% & 78\% & 0.85 & 6.16 \\
+A: Llama 3.1 8B & 161 & 94 & 0.058 & 47\% & 10\% & 7.19 & 2.22 \\
+B: Qwen 2.5 7B & 166 & 125 & 0.064 & 39\% & 11\% & 5.57 & 2.59 \\
+C: Mistral 7B & 210 & 134 & 0.064 & 61\% & 17\% & 5.19 & 2.92 \\
+D: gpt-oss-120b & 294 & 206 & 0.051 & 10\% & 13\% & 2.15 & 3.32 \\
+E: Gemini 3.1 Flash-Lite & 279 & 170 & 0.035 & 45\% & 9\% & 3.60 & 2.27 \\
+Human (Microsoft) & 312 & 95 & 0.063 & 77\% & 1\% & 1.43 & 3.69 \\
+Human (Mandiant) & 295 & 93 & 0.078 & 74\% & 4\% & 1.77 & 3.57 \\
+\bottomrule
+\end{tabular}
+\end{table*}

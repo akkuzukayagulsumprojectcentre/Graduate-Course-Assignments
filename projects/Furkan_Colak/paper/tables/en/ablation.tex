@@ -7,23 +7,23 @@
 \toprule
 Condition & In-generator & Cross (A--C) & D & E \\
 \midrule
-TF-IDF only (LR) & 0.997 $\pm$ 0.004 & 0.966 $\pm$ 0.008 & 0.329 $\pm$ 0.017 & 0.961 $\pm$ 0.012 \\
-Stylometry only (XGB) & 0.934 $\pm$ 0.006 & 0.868 $\pm$ 0.004 & 0.706 $\pm$ 0.013 & 0.778 $\pm$ 0.022 \\
-TF-IDF + stylometry (LR) & 0.964 $\pm$ 0.005 & 0.919 $\pm$ 0.010 & 0.735 $\pm$ 0.060 & 0.839 $\pm$ 0.021 \\
-LR, no output cleaning & 0.997 $\pm$ 0.004 & 0.965 $\pm$ 0.008 & 0.336 $\pm$ 0.018 & 0.955 $\pm$ 0.012 \\
-LR, agency names masked & 0.996 $\pm$ 0.004 & 0.967 $\pm$ 0.008 & 0.349 $\pm$ 0.016 & 0.964 $\pm$ 0.012 \\
-RoBERTa, agency names masked & 0.988 $\pm$ 0.004 & 0.986 $\pm$ 0.002 & 0.901 $\pm$ 0.035 & 0.985 $\pm$ 0.007 \\
-Stylometry: length only & 0.875 $\pm$ 0.008 & 0.790 $\pm$ 0.004 & 0.482 $\pm$ 0.060 & 0.657 $\pm$ 0.039 \\
-Stylometry: lexical only & 0.845 $\pm$ 0.025 & 0.816 $\pm$ 0.024 & 0.863 $\pm$ 0.025 & 0.865 $\pm$ 0.033 \\
-Stylometry: punctuation only & 0.823 $\pm$ 0.012 & 0.771 $\pm$ 0.024 & 0.492 $\pm$ 0.055 & 0.590 $\pm$ 0.043 \\
-Stylometry: repetition only & 0.800 $\pm$ 0.020 & 0.769 $\pm$ 0.024 & 0.825 $\pm$ 0.020 & 0.775 $\pm$ 0.037 \\
-Stylometry: POS only & 0.814 $\pm$ 0.038 & 0.755 $\pm$ 0.036 & 0.777 $\pm$ 0.052 & 0.850 $\pm$ 0.063 \\
-Coordinator, all agents & 0.998 $\pm$ 0.000 & 0.993 $\pm$ 0.003 & 0.721 $\pm$ 0.083 & 0.995 $\pm$ 0.003 \\
-Coordinator without Lexical-LR & 0.998 $\pm$ 0.000 & 0.993 $\pm$ 0.003 & 0.727 $\pm$ 0.084 & 0.995 $\pm$ 0.003 \\
-Coordinator without Lexical-SVM & 0.996 $\pm$ 0.002 & 0.990 $\pm$ 0.008 & 0.784 $\pm$ 0.058 & 0.991 $\pm$ 0.002 \\
-Coordinator without LLM Judge & 0.999 $\pm$ 0.001 & 0.993 $\pm$ 0.004 & 0.732 $\pm$ 0.102 & 0.996 $\pm$ 0.004 \\
-Coordinator without Stylometry & 0.998 $\pm$ 0.002 & 0.994 $\pm$ 0.001 & 0.722 $\pm$ 0.125 & 0.992 $\pm$ 0.004 \\
-Coordinator without RoBERTa & 0.997 $\pm$ 0.003 & 0.972 $\pm$ 0.007 & 0.490 $\pm$ 0.094 & 0.960 $\pm$ 0.006 \\
+TF-IDF only (LR) & 0.997 $\pm$ 0.004 & 0.966 $\pm$ 0.009 & 0.336 $\pm$ 0.032 & 0.960 $\pm$ 0.013 \\
+Stylometry only (XGB) & 0.935 $\pm$ 0.009 & 0.869 $\pm$ 0.010 & 0.704 $\pm$ 0.010 & 0.784 $\pm$ 0.015 \\
+TF-IDF + stylometry (LR) & 0.966 $\pm$ 0.006 & 0.921 $\pm$ 0.011 & 0.730 $\pm$ 0.067 & 0.838 $\pm$ 0.033 \\
+LR, no output cleaning & 0.997 $\pm$ 0.004 & 0.965 $\pm$ 0.011 & 0.342 $\pm$ 0.030 & 0.956 $\pm$ 0.014 \\
+LR, agency names masked & 0.996 $\pm$ 0.004 & 0.968 $\pm$ 0.008 & 0.346 $\pm$ 0.028 & 0.966 $\pm$ 0.014 \\
+RoBERTa, agency names masked & 0.987 $\pm$ 0.007 & 0.985 $\pm$ 0.007 & 0.882 $\pm$ 0.005 & 0.987 $\pm$ 0.008 \\
+Stylometry: length only & 0.871 $\pm$ 0.008 & 0.792 $\pm$ 0.007 & 0.504 $\pm$ 0.034 & 0.675 $\pm$ 0.028 \\
+Stylometry: lexical only & 0.842 $\pm$ 0.025 & 0.815 $\pm$ 0.023 & 0.865 $\pm$ 0.020 & 0.872 $\pm$ 0.029 \\
+Stylometry: punctuation only & 0.820 $\pm$ 0.033 & 0.767 $\pm$ 0.026 & 0.487 $\pm$ 0.090 & 0.590 $\pm$ 0.063 \\
+Stylometry: repetition only & 0.795 $\pm$ 0.023 & 0.770 $\pm$ 0.029 & 0.818 $\pm$ 0.028 & 0.766 $\pm$ 0.037 \\
+Stylometry: POS only & 0.801 $\pm$ 0.021 & 0.748 $\pm$ 0.024 & 0.768 $\pm$ 0.050 & 0.840 $\pm$ 0.046 \\
+Coordinator, all agents & 0.996 $\pm$ 0.001 & 0.993 $\pm$ 0.005 & 0.732 $\pm$ 0.089 & 0.993 $\pm$ 0.010 \\
+Coordinator without Lexical-LR & 0.996 $\pm$ 0.001 & 0.993 $\pm$ 0.005 & 0.736 $\pm$ 0.088 & 0.993 $\pm$ 0.010 \\
+Coordinator without Lexical-SVM & 0.994 $\pm$ 0.001 & 0.989 $\pm$ 0.003 & 0.775 $\pm$ 0.081 & 0.988 $\pm$ 0.010 \\
+Coordinator without LLM Judge & 0.996 $\pm$ 0.001 & 0.993 $\pm$ 0.005 & 0.738 $\pm$ 0.097 & 0.993 $\pm$ 0.010 \\
+Coordinator without Stylometry & 0.997 $\pm$ 0.001 & 0.994 $\pm$ 0.001 & 0.718 $\pm$ 0.107 & 0.989 $\pm$ 0.013 \\
+Coordinator without RoBERTa & 0.996 $\pm$ 0.004 & 0.968 $\pm$ 0.004 & 0.469 $\pm$ 0.101 & 0.957 $\pm$ 0.008 \\
 \bottomrule
 \end{tabular}
 \end{table*}

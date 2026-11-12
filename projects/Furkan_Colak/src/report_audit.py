@@ -11,8 +11,10 @@ LEAK = RESULTS / "leakage"
 SUPERVISED = ["lexical_lr", "lexical_svm", "stylometry_xgb", "transformer", "coordinator"]
 SETTINGS = {"In": "In-generator", "Cross": "Cross (A--C)", "D": "D, one generator", "E": "E, one generator",
             "D, ABC": "D, ABC", "E, ABC": "E, ABC"}
-KINDS = {"source": "By report (used)", "group": "Near-duplicate reports joined", "chunk": "By excerpt (leaky)",
-         "shuffled": "By report, labels shuffled"}
+KINDS = {"source": "By report, purged (used)", "chunk": "By excerpt (leaky)", "shuffled": "Purged, labels shuffled"}
+# Columns of the leakage table: (run, test subset), header and macro tag.
+COLS = {("unpurged", "all"): ("Plain split", "Plain"), ("purged", "all"): ("Purged", "Purged"),
+        ("purged", "strict"): ("Purged, strict", "Strict")}
 
 
 def leakage_tables(out: list[str]) -> None:
@@ -22,43 +24,52 @@ def leakage_tables(out: list[str]) -> None:
         v = f"{v:,}".replace(",", "{,}") if isinstance(v, int) and v >= 10000 else v
         out.append(macro(name("Leak", k), float(v) if isinstance(v, float) else v))
     per = pd.read_csv(LEAK / "per_seed.csv")
-    for col in ["test_chunks", "human_dup", "chunks_dup", "chunks_strict"]:
-        out += [macro(name("Leak", col, "min"), int(per[col].min())), macro(name("Leak", col, "max"), int(per[col].max()))]
-    out.append(macro("LeakLlmDupTotal", int(per.llm_dup.sum())))
-    share = per.chunks_dup / per.test_chunks
-    out += [macro("LeakDupShareMin", f"{100 * share.min():.0f}\\%"), macro("LeakDupShareMax", f"{100 * share.max():.0f}\\%")]
+    for split, tag in [("unpurged", "Plain"), ("purged", "Purged")]:
+        p = per[per.split == split]
+        for col in ["test_chunks", "human_dup", "chunks_dup", "chunks_strict"]:
+            out += [macro(name("Leak", tag, col, "min"), int(p[col].min())),
+                    macro(name("Leak", tag, col, "max"), int(p[col].max()))]
+        out += [macro(name("Leak", tag, "llm_dup_total"), int(p.llm_dup.sum())),
+                macro(name("Leak", tag, "max_containment"), float(p.max_containment.max()))]
+        share = p.chunks_dup / p.test_chunks
+        out += [macro(name("Leak", tag, "dup_share_min"), f"{100 * share.min():.0f}\\%"),
+                macro(name("Leak", tag, "dup_share_max"), f"{100 * share.max():.0f}\\%")]
 
-    s = pd.read_csv(LEAK / "sensitivity_summary.csv").set_index(["setting", "detector", "subset"])
-    sup = s.loc[s.index.get_level_values("detector").isin(SUPERVISED)]
-    for sub in ["clean", "strict"]:
+    s = pd.read_csv(LEAK / "sensitivity_summary.csv").set_index(["run", "subset", "setting", "detector"])
+    for a, b, tag in [(("purged", "all"), ("unpurged", "all"), "purge"),
+                      (("purged", "strict"), ("purged", "all"), "strict")]:
         for v in ["f1", "auc"]:
-            d = sup.xs(sub, level="subset")[f"{v}_mean"] - sup.xs("all", level="subset")[f"{v}_mean"]
-            out += [macro(name("Leak", "max_delta", sub, v), float(d.abs().max())),
-                    macro(name("Leak", "n_up", sub, v), int((d > 0.0005).sum())),
-                    macro(name("Leak", "n_down", sub, v), int((d < -0.0005).sum())),
-                    macro(name("Leak", "n_comp", sub, v), int(len(d)))]
-    zs = s.loc[s.index.get_level_values("detector").isin(["fast_detectgpt", "binoculars"])]
-    d = (zs.xs("clean", level="subset").f1_mean - zs.xs("all", level="subset").f1_mean).abs()
-    out.append(macro("LeakMaxDeltaZeroFone", float(d.max())))
+            d = s.loc[a][f"{v}_mean"] - s.loc[b][f"{v}_mean"]
+            sup = d[d.index.get_level_values("detector").isin(SUPERVISED)]
+            out += [macro(name("Leak", "max_delta", tag, v), float(sup.abs().max())),
+                    macro(name("Leak", "n_up", tag, v), int((sup > 0.0005).sum())),
+                    macro(name("Leak", "n_down", tag, v), int((sup < -0.0005).sum())),
+                    macro(name("Leak", "n_comp", tag, v), int(len(sup)))]
+            if v == "f1":
+                zs = d[d.index.get_level_values("detector").isin(["fast_detectgpt", "binoculars"])]
+                out.append(macro(name("Leak", "max_delta_zero", tag), float(zs.abs().max())))
     rows = []
     for sett, label in SETTINGS.items():
         for det in THREE:
-            cells = [cpm(s.loc[(sett, det, sub), "f1_mean"], s.loc[(sett, det, sub), "f1_std"])
-                     for sub in ["all", "clean", "strict"]]
-            cells += [f"{s.loc[(sett, det, sub), 'auc_mean']:.3f}" for sub in ["all", "clean", "strict"]]
-            for sub in ["all", "clean", "strict"]:
-                out.append(macro(name("Leak", sett, DETECTORS[det], sub), float(s.loc[(sett, det, sub), "f1_mean"])))
+            cells = [cpm(s.loc[(*k, sett, det), "f1_mean"], s.loc[(*k, sett, det), "f1_std"]) for k in COLS]
+            cells += [f"{s.loc[(*k, sett, det), 'auc_mean']:.3f}" for k in COLS]
+            for k, (_, tag) in COLS.items():
+                out.append(macro(name("Leak", sett, DETECTORS[det], tag), float(s.loc[(*k, sett, det), "f1_mean"])))
+                out.append(macro(name("LeakAuc", sett, DETECTORS[det], tag), float(s.loc[(*k, sett, det), "auc_mean"])))
             rows.append(f"{label} & {NAMES_X[det]} & " + " & ".join(cells))
-    n = {sub: s.xs(("In", "lexical_lr")).loc[sub, "n_mean"] for sub in ["all", "clean", "strict"]}
+    n = {k: s.loc[(*k, "In", "lexical_lr"), "n_mean"] for k in COLS}
+    head = " & ".join(h for h, _ in COLS.values())
     table("leakage.tex",
           "Setting & Detector & \\multicolumn{3}{c}{F1} & \\multicolumn{3}{c}{ROC-AUC} \\\\\n"
           "\\cmidrule(lr){3-5}\\cmidrule(lr){6-8}\n"
-          " & & All & No dup. & Strict & All & No dup. & Strict",
-          rows, f"Main results on all test excerpts and without those whose human or LLM text has a near-duplicate in "
-          f"the training or validation split of the same seed (containment of word 5-grams $\\geq$ {facts['dup']}; "
-          f"strict: $\\geq$ {facts['strict']}). Mean test-set size: {n['all']:.0f} / {n['clean']:.0f} / {n['strict']:.0f} "
-          f"texts. F1 is mean $\\pm$ std over three seeds.", "tab:leakage", wide=True,
-          spec="llcccccc", size="\\scriptsize")
+          f" & & {head} & {head}",
+          rows, f"Main results before and after purging. Plain split: by source id only, with near-duplicates of some "
+          f"test excerpts in training or validation. Purged: the same test sets, with every training and validation "
+          f"report removed that holds a near-duplicate of a test excerpt (containment of word 5-grams $\\geq$ "
+          f"{facts['dup']}); all other results in this paper use it. Strict: the purged run without the test excerpts "
+          f"that still reach a containment of {facts['strict']}. Mean test-set size: "
+          f"{n[('purged', 'all')]:.0f} texts, {n[('purged', 'strict')]:.0f} under the strict cut. F1 is mean $\\pm$ "
+          f"std over three seeds.", "tab:leakage", wide=True, spec="llcccccc", size="\\scriptsize")
 
     c = pd.read_csv(LEAK / "controls_summary.csv").set_index(["kind", "setting", "detector"])
     rows = []
@@ -75,8 +86,8 @@ def leakage_tables(out: list[str]) -> None:
     out += [macro("CtrlShuffledAucMin", float(shuf.min())), macro("CtrlShuffledAucMax", float(shuf.max()))]
     table("controls.tex", "Split & Detector & In & Cross & D & E", rows,
           "Control trainings, F1 at threshold 0.5 (mean over three seeds and the training generators A, B, C). Under "
-          "the two alternative splits the test sets differ from the main ones, and D and E cover fewer of their "
-          "excerpts.", "tab:controls", spec="llcccc", size="\\scriptsize\\setlength{\\tabcolsep}{3pt}")
+          "the split by excerpt the test sets differ from the main ones, and D and E cover fewer of their excerpts.",
+          "tab:controls", spec="llcccc", size="\\scriptsize\\setlength{\\tabcolsep}{3pt}")
 
 
 def newgen_table(out: list[str]) -> None:

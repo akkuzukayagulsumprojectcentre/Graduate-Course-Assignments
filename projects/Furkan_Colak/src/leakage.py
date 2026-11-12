@@ -1,10 +1,12 @@
 """Leakage checks (leakage stage).
 
 1. Audit of the saved predictions: no scored test row may come from a training or validation source of its seed.
-2. Near-duplicate texts across splits, by word-shingle containment (src.dedup).
-3. Every main result recomputed without the test excerpts that have a near-duplicate in training or validation.
-4. Control trainings (CPU detectors): a split that keeps near-duplicate reports together, a chunk-level split that
-   lets excerpts of one report fall on both sides, and the source split with shuffled training labels.
+2. Near-duplicate texts across splits by word-shingle containment, for the plain source split and for the purged
+   split that the experiments use (src.dedup, build stage).
+3. Main results of the purged run against the run on the plain source split (results/before_purge, same test
+   sets), and of the purged run without the test excerpts that pass a stricter similarity cut.
+4. Control trainings (CPU detectors): a chunk-level split that lets excerpts of one report fall on both sides, and
+   the purged split with shuffled training labels.
 """
 import json
 import re
@@ -22,6 +24,7 @@ from src.settings import DATA, RESULTS
 
 PROCESSED = DATA / "processed"
 OUT = RESULTS / "leakage"
+BEFORE = RESULTS / "before_purge"  # main predictions of the run on the plain source split (commit b4185b7)
 NAME = re.compile(r"(?P<exp>.+)__train-(?P<train>[A-C]+)__seed-(?P<seed>\d+)")
 SKIP = {"id", "source_id", "generator", "mode", "template", "topic", "label", "len_ratio", "test"}
 
@@ -42,9 +45,8 @@ def audit(splits: dict) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def near_dups(df: pd.DataFrame, splits: dict, n: int) -> pd.DataFrame:
+def near_dups(df: pd.DataFrame, sh: list[set], splits: dict) -> pd.DataFrame:
     """Largest containment of every test text in one training or validation text of the same seed."""
-    sh = [shingles(t, n) for t in df.text]
     ids = df.id.to_numpy()
     parts = []
     for seed, s in splits.items():
@@ -57,6 +59,20 @@ def near_dups(df: pd.DataFrame, splits: dict, n: int) -> pd.DataFrame:
                                    "generator": t.generator.to_numpy(), "containment": best,
                                    "nearest": np.where(arg >= 0, ids[fit][np.maximum(arg, 0)], "")}))
     return pd.concat(parts, ignore_index=True)
+
+
+def per_seed(nd: pd.DataFrame, cfg: dict, split: str) -> list[dict]:
+    rows = []
+    for seed, g in nd.groupby("seed"):
+        h = g[g.label == 0]
+        rows.append({"split": split, "seed": seed, "test_chunks": h.chunk_id.nunique(),
+                     "human_median": float(h.containment.median()),
+                     "human_dup": int((h.containment >= cfg["dup"]).sum()),
+                     "llm_dup": int((g[g.label == 1].containment >= cfg["dup"]).sum()),
+                     "chunks_dup": g.chunk_id[g.containment >= cfg["dup"]].nunique(),
+                     "chunks_strict": g.chunk_id[g.containment >= cfg["strict"]].nunique(),
+                     "max_containment": float(g.containment.max())})
+    return rows
 
 
 def siblings(human: pd.DataFrame, n: int) -> np.ndarray:
@@ -81,19 +97,16 @@ def setting(train: str, test: str) -> str:
     return "In" if test == train else ("Cross" if test in "ABC" else test)
 
 
-def sensitivity(nd: pd.DataFrame, cfg: dict) -> pd.DataFrame:
-    """Main results on all test excerpts and on those whose texts have no near-duplicate in training or validation."""
-    flagged = {(seed, thr): set(g.chunk_id[g.containment >= v])
-               for seed, g in nd.groupby("seed") for thr, v in (("clean", cfg["dup"]), ("strict", cfg["strict"]))}
+def main_scores(folder, drops: dict[str, dict[str, set]]) -> pd.DataFrame:
+    """Scores of every main run, on all test excerpts and without the chunks of each named subset (per seed)."""
     rows = []
-    for path in sorted((RESULTS / "preds").glob("main__*.parquet")):
+    for path in sorted(folder.glob("main__*.parquet")):
         m = NAME.match(path.stem)
         d = pd.read_parquet(path)
         chunk = d.id.str.split("|").str[0]
         dets = [c for c in d.columns if c not in SKIP and not c.startswith("coord_minus")]
-        for sub, drop in (("all", set()), ("clean", flagged[(m["seed"], "clean")]),
-                          ("strict", flagged[(m["seed"], "strict")])):
-            keep = d[~chunk.isin(drop)]
+        for sub, drop in {"all": {}, **drops}.items():
+            keep = d[~chunk.isin(drop.get(m["seed"], set()))]
             for test, g in keep.groupby("test"):
                 if (sett := setting(m["train"], test)) and g.label.nunique() == 2:
                     rows += [{"train": m["train"], "seed": m["seed"], "test": test, "setting": sett, "subset": sub,
@@ -102,21 +115,17 @@ def sensitivity(nd: pd.DataFrame, cfg: dict) -> pd.DataFrame:
 
 
 def subset(df: pd.DataFrame, units: list[str], gens: list[str]) -> pd.DataFrame:
-    """As experiments.subset, on the split unit of a control (report, report group or chunk)."""
+    """As experiments.subset, on the split unit of a control (report or chunk)."""
     d = df[df.unit.isin(units)]
     llm = d[d.generator.isin(gens) & (d["mode"] == "multi")]
     return pd.concat([d[(d.label == 0) & d.chunk_id.isin(llm.chunk_id)], llm])
 
 
-def controls(df: pd.DataFrame, splits: dict, groups: dict, cfg: dict, ecfg: dict) -> pd.DataFrame:
+def controls(df: pd.DataFrame, splits: dict, cfg: dict, ecfg: dict) -> pd.DataFrame:
     gens = sorted(set(df.generator) - {"human"})
-    group_ids = df.source_id.map(groups)
-    kinds = {
-        "source": (df.source_id, splits),
-        "group": (group_ids, make_splits(group_ids.tolist(), ecfg["seeds"], ecfg["split"])),
-        "chunk": (df.chunk_id, make_splits(df.chunk_id.tolist(), ecfg["seeds"], ecfg["split"])),
-        "shuffled": (df.source_id, splits),
-    }
+    kinds = {"source": (df.source_id, splits),
+             "chunk": (df.chunk_id, make_splits(df.chunk_id.tolist(), ecfg["seeds"], ecfg["split"])),
+             "shuffled": (df.source_id, splits)}
     p = ecfg["detectors"]
     rows = []
     for kind, (unit, sp) in kinds.items():
@@ -155,6 +164,8 @@ def run(ecfg: dict) -> None:
     feats = pd.read_parquet(PROCESSED / "features.parquet")
     df = df.drop(columns=[c for c in ALL if c in df.columns]).merge(feats[["id"] + ALL], on="id")
     splits = json.loads((PROCESSED / "splits.json").read_text(encoding="utf-8"))
+    plain = json.loads((PROCESSED / "splits_unpurged.json").read_text(encoding="utf-8"))
+    purged = pd.read_csv(PROCESSED / "purged.csv")
     n = cfg["shingle"]
 
     a = audit(splits)
@@ -164,44 +175,48 @@ def run(ecfg: dict) -> None:
                   for s in seeds.values())
 
     human = df[df.label == 0].reset_index(drop=True)
-    nd = near_dups(df, splits, n)
+    sh = [shingles(t, n) for t in df.text]
+    nd_plain, nd = near_dups(df, sh, plain), near_dups(df, sh, splits)
+    nd_plain.to_csv(OUT / "near_dup_unpurged.csv", index=False)
     nd.to_csv(OUT / "near_dup.csv", index=False)
-    groups = dup_groups(human, n, cfg["dup"])
-    sizes = Counter(groups.values())
+    pd.DataFrame(per_seed(nd_plain, cfg, "unpurged") + per_seed(nd, cfg, "purged")).to_csv(OUT / "per_seed.csv",
+                                                                                          index=False)
+    sizes = Counter(dup_groups(human, n, cfg["dup"]).values())
     sib = siblings(human, n)
     ext = pd.read_parquet(PROCESSED / "extra.parquet")
     vendor = ext[(ext.group == "external") & (ext.label == 0)]
     vend, _ = containment([shingles(t, n) for t in vendor.text], [shingles(t, n) for t in human.text])
-    val_human = [int(human.source_id.isin(s["val"]).sum()) for s in splits.values()]
-    val = [len(s["val"]) for s in splits.values()]
+    size = {k: [len(s[k]) for s in splits.values()] for k in ("train", "val")}
+    size["val_human"] = [int(human.source_id.isin(s["val"]).sum()) for s in splits.values()]
+    removed = purged[purged.action == "removed"].groupby("seed").size().reindex(map(int, splits), fill_value=0)
+    moved = purged[purged.action != "removed"].groupby("seed").size().reindex(map(int, splits), fill_value=0)
 
     facts = {"shingle": n, "dup": cfg["dup"], "strict": cfg["strict"], "split_overlap": overlap,
              "audit_files": len(a), "audit_rows": int(a.rows.sum()),
              "audit_bad": int(a[["in_train", "in_val", "not_test"]].sum().sum()),
              "dup_groups": sum(v > 1 for v in sizes.values()), "dup_sources": sum(v for v in sizes.values() if v > 1),
-             "n_sources": len(groups), "sibling_median": float(np.median(sib)),
-             "sibling_dup": int((sib >= cfg["dup"]).sum()), "n_siblings": len(sib), "vendor_max": float(vend.max()),
-             "vendor_dup": int((vend >= cfg["dup"]).sum()), "n_vendor": len(vendor),
-             "val_min": min(val), "val_max": max(val), "val_human_min": min(val_human), "val_human_max": max(val_human)}
-    rows = []
-    for seed, g in nd.groupby("seed"):
-        h = g[g.label == 0]
-        rows.append({"seed": seed, "test_chunks": h.chunk_id.nunique(), "test_sources": h.source_id.nunique(),
-                     "human_median": float(h.containment.median()),
-                     "human_dup": int((h.containment >= cfg["dup"]).sum()),
-                     "llm_dup": int((g[g.label == 1].containment >= cfg["dup"]).sum()),
-                     "chunks_dup": g.chunk_id[g.containment >= cfg["dup"]].nunique(),
-                     "chunks_strict": g.chunk_id[g.containment >= cfg["strict"]].nunique()})
-    pd.DataFrame(rows).to_csv(OUT / "per_seed.csv", index=False)
+             "n_sources": int(human.source_id.nunique()),
+             "removed_min": int(removed.min()), "removed_max": int(removed.max()),
+             "moved_min": int(moved.min()), "moved_max": int(moved.max()),
+             "train_min": min(size["train"]), "train_max": max(size["train"]),
+             "val_min": min(size["val"]), "val_max": max(size["val"]),
+             "val_human_min": min(size["val_human"]), "val_human_max": max(size["val_human"]),
+             "sibling_median": float(np.median(sib)), "sibling_dup": int((sib >= cfg["dup"]).sum()),
+             "n_siblings": len(sib), "vendor_max": float(vend.max()), "vendor_dup": int((vend >= cfg["dup"]).sum()),
+             "n_vendor": len(vendor)}
     (OUT / "facts.json").write_text(json.dumps(facts, indent=1), encoding="utf-8")
 
-    sens = sensitivity(nd, cfg)
+    strict = {seed: set(g.chunk_id[g.containment >= cfg["strict"]]) for seed, g in nd.groupby("seed")}
+    parts = [main_scores(RESULTS / "preds", {"strict": strict}).assign(run="purged")]
+    if BEFORE.exists():
+        parts.append(main_scores(BEFORE, {}).assign(run="unpurged"))
+    sens = pd.concat(parts, ignore_index=True)
     sens.to_csv(OUT / "sensitivity.csv", index=False)
-    by_seed(sens, ["setting", "detector", "subset"], ["n", "f1", "auc", "fpr", "fnr"]) \
+    by_seed(sens, ["run", "subset", "setting", "detector"], ["n", "f1", "auc", "fpr", "fnr"]) \
         .to_csv(OUT / "sensitivity_summary.csv", index=False)
 
-    ctrl = controls(df, splits, groups, cfg, ecfg)
+    ctrl = controls(df, splits, cfg, ecfg)
     ctrl.to_csv(OUT / "controls.csv", index=False)
     by_seed(ctrl, ["kind", "setting", "detector"], ["n", "f1", "auc"]).to_csv(OUT / "controls_summary.csv", index=False)
     print(json.dumps(facts, indent=1))
-    print(pd.DataFrame(rows).to_string(index=False))
+    print(pd.read_csv(OUT / "per_seed.csv").to_string(index=False))

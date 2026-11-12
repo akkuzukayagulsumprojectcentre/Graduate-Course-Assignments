@@ -1,4 +1,4 @@
-"""Near-duplicate texts by word-shingle containment (used by the leakage stage).
+"""Near-duplicate texts by word-shingle containment, shared by the build and leakage stages.
 
 CISA posts some advisories under two addresses (an advisory code and a descriptive slug) or as an updated copy, so
 two source ids can hold the same text. Splitting by source id alone would then put one text on both sides.
@@ -58,4 +58,25 @@ def dup_groups(human: pd.DataFrame, n: int, thr: float) -> dict[str, str]:
             if src[j] != src[i] and s and k / len(s) >= thr:
                 parent[root(src[i])] = root(src[j])
     return {s: root(s) for s in parent}
+
+
+def purge(splits: dict, groups: dict[str, str]) -> tuple[dict, list[dict]]:
+    """Keep the test splits as they are and remove their near-duplicates from training and validation.
+
+    Test splits stay fixed because the test-only generators D and E were written for these excerpts only. A group
+    split between training and validation alone is moved to training. Returns the new splits and a log of changes.
+    """
+    members = defaultdict(set)
+    for s, g in groups.items():
+        members[g].add(s)
+    out, log = {}, []
+    for seed, s in splits.items():
+        test, val, train = set(s["test"]), set(s["val"]), set(s["train"])
+        drop = {x for m in members.values() if m & test for x in m} - test
+        to_train = {x for x in val - drop if (members[groups[x]] - {x}) & train}
+        out[seed] = {"test": sorted(test), "val": sorted(val - drop - to_train), "train": sorted((train | to_train) - drop)}
+        log += [{"seed": seed, "source_id": x, "from": "train" if x in train else "val", "action": "removed"}
+                for x in sorted(drop)]
+        log += [{"seed": seed, "source_id": x, "from": "val", "action": "moved to train"} for x in sorted(to_train)]
+    return out, log
 

@@ -56,10 +56,10 @@ parçaları gibi uzun, kişisiz ve sözcük çeşitliliği düşük metinler; ya
 kalibrasyon, üretici kayması altında olasılıkları kötüleştiriyor. Bir LLM ile yeniden ifade eğitimsiz dedektörlerin
 duyarlılığını düşürüyor, eğitilmiş olanlarınkini değiştirmiyor; kaynaktan yeniden yazım ve cümle düzeyinde
 karıştırma ikisini de düşürüyor. Koordinatör \GapN{} senaryonun \GapWins{} tanesinde RoBERTa'dan iyi, en çok ağırlık
-verdiği üyenin çöktüğü \GapLosses{} senaryoda ondan kötü. Kaydedilmiş tahminler üzerinde yapılan sızıntı denetimi
-eğitimde hiçbir test raporu bulmuyor; ancak CISA'nın aynı bildirimi iki kez yayımlaması, test parçalarının
-\LeakDupShareMin{}--\LeakDupShareMax{} kadarının eğitimde yakın bir kopyasının bulunmasına yol açıyor. Bunlar
-çıkarıldığında hiçbir eğitilmiş dedektörün F1 değeri \LeakMaxDeltaCleanFOne{} değerinden fazla değişmiyor.
+verdiği üyenin çöktüğü \GapLosses{} senaryoda ondan kötü. CISA'nın aynı bildirimi iki kez yayımlaması, test
+parçalarının \LeakPlainDupShareMin{}--\LeakPlainDupShareMax{} kadarının eğitimde yakın bir kopyasının bulunmasına yol
+açmıştı. Bu raporları eğitimden çıkardık; hiçbir eğitilmiş dedektörün F1 değeri \LeakMaxDeltaPurgeFOne{} değerinden
+fazla değişmedi ve kaydedilmiş tahminler üzerindeki denetim eğitimde hiçbir test raporu ya da kopyası bulmuyor.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -114,8 +114,8 @@ var.
 \item Beş model ailesinden beş üreticinin aynı çıkarılmış olgulardan yazdığı, içeriği denetlenmiş bir CTI derlemi
 kuruyoruz. Hepsi 30 Kasım 2022 veya öncesinde yayımlanmış üç yayıncının insan metni, üretici kaymasını yayıncı
 kaymasından ayırıyor; test parçalarına on iki yeniden yazım, prompt stratejisi ve kısmi üretim koşulu uygulanıyor.
-Bütün bölmeler kaynak rapor düzeyinde yapılıyor ve bölme, kaydedilmiş tahminler üzerinde, yakın kopya raporlar
-için ve kontrol eğitimleriyle denetleniyor.
+Bütün bölmeler kaynak rapor düzeyinde yapılıyor ve yakın kopya raporlardan ayıklanıyor; ayrım kaydedilmiş
+tahminler üzerinde ve kontrol eğitimleriyle denetleniyor.
 \item Kayma altında sıralamayı ve kararı ayrı ayrı ölçüyoruz. Üç kalibratör ve beş eşik kuralı yalnızca doğrulama
 verisiyle kuruluyor; kurallardan ikisi test üreticisi hakkında hiçbir varsayım yapmıyor. Sonuç şu: görülmemiş bir
 üretici için işe yarayan iki çare, havuzlanmış eğitim verisi ve insan skorlarından belirlenen eşik, başka bir
@@ -290,10 +290,11 @@ bütün metinlerde tire ve tırnakların Unicode varyantlarını normalleştiriy
 ölçülüyor. 50 kelimeden kısa metinler atılıyor.
 
 Bölme kaynak rapor düzeyinde yapılıyor: CISA kaynaklarının \%70'i eğitim, \%10'u doğrulama ve \%20'si test için, her
-seed (42, 123, 2024) için ayrı. Bir insan parçası ve yeniden yazılmış olsun olmasın bütün LLM sürümleri her zaman
-aynı kümeye düşüyor. Vektörleştiriciler, ölçekleyiciler, dedektörler, Koordinatör, kalibratörler ve eşikler
-yalnızca eğitim veya doğrulama verisiyle kuruluyor. Test, D, E, yeniden yazılmış ve dış yayıncı metinleri yalnızca
-puanlanıyor. Bu ayrımın nasıl denetlendiği Bölüm~\ref{sec:leaksetup}'de anlatılıyor.
+seed (42, 123, 2024) için ayrı. Ardından bir test raporunun yakın kopyası olan raporlar eğitim ve doğrulama
+bölmelerinden çıkarılıyor (Bölüm~\ref{sec:leaksetup}). Bir insan parçası ve yeniden yazılmış olsun olmasın bütün LLM
+sürümleri her zaman aynı kümeye düşüyor. Vektörleştiriciler, ölçekleyiciler, dedektörler, Koordinatör,
+kalibratörler ve eşikler yalnızca eğitim veya doğrulama verisiyle kuruluyor. Test, D, E, yeniden yazılmış ve dış
+yayıncı metinleri yalnızca puanlanıyor.
 
 \section{Tespit Ajanları}\label{sec:agents}
 \subsection{Üyeler}
@@ -395,18 +396,28 @@ Görülmemiş üreticiler için yanlış pozitif oranını (işaretlenen insan m
 birleştiriyor, oysa CTI'da bedelleri farklı.
 
 \subsection{Sızıntı denetimi}\label{sec:leaksetup}
-Kaynak kimliğine göre bölme, ancak her raporun tek bir kimliği varsa sızıntıyı önler. Bu yüzden ayrımı, burada
-raporlanan çalıştırmaların kaydedilmiş tahminleri üzerinde dört yoldan denetliyoruz. Birincisi, her tahmin dosyası
-taranıyor: puanlanan her test satırı, kendi seed'inin test bölmesindeki bir kaynaktan gelmeli. İkincisi, insan ya
-da LLM yazımı her test metni, aynı seed'in bütün eğitim ve doğrulama metinleriyle kelime 5-gramı kapsanma oranıyla
-karşılaştırılıyor; bu oran, metnin 5-gramlarından tek bir başka metinde de geçenlerin payı. En az \LeakDup{} oranı
-yakın kopya sayılıyor; \LeakStrict{} değerindeki daha sıkı bir eşik uzun pasaj paylaşan parçaları da işaretliyor.
-Üçüncüsü, bütün ana sonuçlar, insan metninin ya da herhangi bir LLM sürümünün yakın kopyası bulunan test parçaları
-çıkarılarak yeniden hesaplanıyor. Parça ve bütün LLM metinleri birlikte çıkarıldığı için test kümeleri eşleştirilmiş
-kalıyor. Dördüncüsü, Lexical-LR ve Stilometri üç kontrol bölmesiyle yeniden eğitiliyor: yakın kopya raporları
-bölmeden önce tek grupta birleştiren bir bölme; bir raporun parçalarının iki tarafa da düşebildiği, parça bazlı bir
-bölme (kaynak bazlı bölmenin önlemeye çalıştığı sızıntı); ve eğitim etiketleri karıştırılmış kaynak bazlı bölme.
-Sonuncusu, etiket bilgisi özellikler veya önişleme yoluyla modele ulaşmıyorsa şans düzeyinde sonuç vermeli.
+Kaynak kimliğine göre bölme, ancak her raporun tek bir kimliği varsa sızıntıyı önler. CISA'da bu koşul sağlanmıyor.
+Bazı bildirimler iki kez yayımlanıyor: AA22-110A gibi bir bildirim koduyla ve açıklayıcı bir adresle ya da
+güncellenmiş bir kopya olarak. Toplayıcı her kopyayı ayrı bir kaynak olarak kaydetmiş. Bu yüzden metinleri kelime
+5-gramı kapsanma oranıyla karşılaştırıyoruz; bu oran, bir metnin 5-gramlarından tek bir başka metinde de geçenlerin
+payı. Bir raporun bir parçası diğer raporun bir parçasında en az \LeakDup{} oranına ulaşıyorsa iki rapor aynı
+gruba alınıyor. Her seed'in test bölmesi çekildiği gibi korunuyor, çünkü yalnızca test için kullanılan D ve E
+üreticileri bu parçalar için yazıldı; bir test raporuyla aynı gruptaki her eğitim ve doğrulama raporu çıkarılıyor
+(seed başına \LeakRemovedMin{} ile \LeakRemovedMax{} rapor). Eğitim ile doğrulama arasında bölünmüş bir grup eğitime
+taşınıyor (\LeakMovedMin{} ile \LeakMovedMax{} rapor). Geriye seed başına \LeakTrainMin{} ile \LeakTrainMax{} eğitim
+ve \LeakValMin{} ile \LeakValMax{} doğrulama raporu kalıyor. Bu makaledeki bütün sonuçlar bu ayıklanmış bölmeleri
+kullanıyor. Düz bölmeler ve çıkarılan raporların listesi repoda duruyor.
+
+Ayıklanmış bölmeler ardından dört yoldan denetleniyor. Birincisi, kaydedilmiş her tahmin dosyası taranıyor:
+puanlanan her test satırı, kendi seed'inin test bölmesindeki bir kaynaktan gelmeli. İkincisi, insan ya da LLM
+yazımı her test metni kendi seed'inin bütün eğitim ve doğrulama metinleriyle, hem düz hem ayıklanmış bölmede
+karşılaştırılıyor; \LeakStrict{} değerindeki daha sıkı bir eşik, bir eğitim metninin kopyası olmadan onunla uzun
+pasajlar paylaşan parçaları da işaretliyor. Üçüncüsü, bütün ana çalıştırmalar aynı test kümelerine sahip düz
+bölmedeki çalıştırmalarla karşılaştırılıyor ve sıkı eşiği aşan test parçaları çıkarılarak yeniden hesaplanıyor.
+Parça ve bütün LLM metinleri birlikte çıkarıldığı için test kümeleri eşleştirilmiş kalıyor. Dördüncüsü, Lexical-LR
+ve Stilometri iki kontrol bölmesiyle yeniden eğitiliyor: bir raporun parçalarının iki tarafa da düşebildiği parça
+bazlı bir bölme (kaynak bazlı bölmenin önlemeye çalıştığı sızıntı) ve eğitim etiketleri karıştırılmış ayıklanmış
+bölme. Sonuncusu, etiket bilgisi özellikler veya önişleme yoluyla modele ulaşmıyorsa şans düzeyinde sonuç vermeli.
 
 \subsection{Kalibrasyon ve eşikler}
 Her dedektör ve eğitim için doğrulama kümesinde üç kalibratör kuruyoruz: Platt ölçekleme (skorun logiti üzerinde
@@ -453,41 +464,42 @@ değiştirdiğini kestiriyor. Kuralları tek bir yazar tanımladı. İkinci bir 
 \input{../tables/tr/leakage.tex}
 \input{../tables/tr/controls.tex}
 \subsection{Sızıntı denetimi}\label{sec:leakage}
-Bölme denetimi hiçbir ihlal bulmuyor. \LeakAuditFiles{} tahmin dosyasındaki \LeakAuditRows{} puanlanmış test
-satırından \LeakAuditBad{} tanesi kendi seed'inin eğitim veya doğrulama kaynağından geliyor ve hiçbir seed'de bir
-kaynak kimliği iki bölmede birden geçmiyor. Yakın kopya taraması ise başka türden bir sızıntı buluyor. CISA bazı
-bildirimleri birden çok kez yayımlıyor: AA22-110A gibi bir bildirim koduyla ve açıklayıcı bir adresle ya da
-güncellenmiş bir kopya olarak. Toplayıcı her kopyayı ayrı bir kaynak olarak kaydetmiş. Hidden Cobra zararlı yazılım
-raporları gibi paragrafları olduğu gibi yeniden kullanan raporlarla birlikte \LeakNSources{} kaynağın
-\LeakDupSources{} tanesi \LeakDupGroups{} yakın kopya grubu oluşturuyor. Seed'e göre \LeakTestChunksMin{} ile
-\LeakTestChunksMax{} test parçasının \LeakChunksDupMin{} ile \LeakChunksDupMax{} tanesinin (\LeakDupShareMin{} ile
-\LeakDupShareMax{}) eğitimde veya doğrulamada insan metni olarak yakın bir kopyası var; sıkı eşikte bu sayı
-\LeakChunksStrictMin{} ile \LeakChunksStrictMax{}. Hiçbir LLM metninin yakın kopyası yok. İki rapor aynı olguları taşısa bile Yazarlar başka bir metnin ifadesini tekrarlamıyor. Parça bazlı bir
-bölmenin ayıracağı, aynı rapordan gelen parçalar birbiriyle az örtüşüyor (medyan kapsanma \LeakSiblingMedian{};
-\LeakNSiblings{} parçadan \LeakSiblingDup{} tanesi yakın kopya). Hiçbir Microsoft veya Mandiant parçası bir CISA
-parçasının yakın kopyası değil (en yüksek kapsanma \LeakVendorMax{}).
+Düz kaynak bölmesinde yakın kopya taraması sızıntı buldu. Hidden Cobra zararlı yazılım raporları gibi paragrafları
+olduğu gibi yeniden kullanan raporlarla birlikte \LeakNSources{} kaynağın \LeakDupSources{} tanesi \LeakDupGroups{}
+yakın kopya grubu oluşturuyor. Seed'e göre \LeakPlainTestChunksMin{} ile \LeakPlainTestChunksMax{} test parçasının
+\LeakPlainChunksDupMin{} ile \LeakPlainChunksDupMax{} tanesinin (\LeakPlainDupShareMin{} ile \LeakPlainDupShareMax{})
+eğitimde veya doğrulamada insan metni olarak yakın bir kopyası vardı; bazıları kelimesi kelimesine aynıydı (en
+yüksek kapsanma \LeakPlainMaxContainment{}). Ayıklamadan sonra hiçbir seed'de hiçbir test parçasının yakın kopyası
+yok (\LeakPurgedChunksDupMax{} parça); bir test metninin bir eğitim veya doğrulama metnindeki en yüksek kapsanma oranı
+\LeakPurgedMaxContainment{}. Sıkı eşikte seed başına \LeakPurgedChunksStrictMin{} ile \LeakPurgedChunksStrictMax{}
+test parçası bir eğitim metniyle hâlâ pasaj paylaşıyor; bunlar çoğunlukla ilişkili bildirimler ve aynı arka plan
+paragrafını tekrarlayan seri raporlar. Ayıklamadan önce de hiçbir LLM metninin yakın kopyası yoktu: iki rapor aynı
+olguları taşısa bile Yazarlar başka bir metnin ifadesini tekrarlamıyor. Parça bazlı bir bölmenin ayıracağı, aynı
+rapordan gelen parçalar birbiriyle az örtüşüyor (medyan kapsanma \LeakSiblingMedian{}; \LeakNSiblings{} parçadan
+\LeakSiblingDup{} tanesi yakın kopya). Hiçbir Microsoft veya Mandiant parçası bir CISA parçasının yakın kopyası değil
+(en yüksek kapsanma \LeakVendorMax{}). Ayıklanmış çalıştırmaların kaydedilmiş tahminleri üzerindeki denetim hiçbir
+ihlal bulmuyor: \LeakAuditFiles{} tahmin dosyasındaki \LeakAuditRows{} puanlanmış test satırından
+\LeakAuditBad{} tanesi kendi seed'inin eğitim veya doğrulama kaynağından geliyor ve hiçbir seed'de bir kaynak kimliği
+iki bölmede birden geçmiyor.
 
-Bu kopyalar sonuçları taşımıyor (Tablo~\ref{tab:leakage}). Kopyalar çıkarıldığında eğitilmiş dedektörlerin F1
-değeri hiçbir senaryoda \LeakMaxDeltaCleanFOne{} değerinden, ROC-AUC değeri \LeakMaxDeltaCleanAuc{} değerinden fazla
-değişmiyor. Sıkı eşikte en büyük değişimler \LeakMaxDeltaStrictFOne{} ve \LeakMaxDeltaStrictAuc{}. Ezberlenmiş bir
-kopyanın en çok fark yaratabileceği D'de Lexical-LR'nin F1 değeri bütün test parçalarında \LeakDLexlrAll{},
-kopyalar olmadan \LeakDLexlrClean{}; RoBERTa'nınki \LeakDTransAll{} ve \LeakDTransClean{}. Eğitilmiş dedektör ve
-senaryo bileşimlerinin \LeakNCompCleanFOne{} tanesinden \LeakNDownCleanFOne{} tanesinde F1 düşüyor,
-\LeakNUpCleanFOne{} tanesinde yükseliyor, kalanlarda üç basamağa kadar aynı kalıyor; ROC-AUC hiçbirinde yükselmiyor.
-Hiçbir eğitim metni görmeyen eğitimsiz dedektörler de aynı yönde \LeakMaxDeltaZeroFone{} değerine kadar
-değişiyor. Demek ki kopyası olan parçalar sınıflandırılması biraz daha kolay parçalar; bu büyüklükte bir değişim,
-test parçalarının onda birini çıkarmanın kendi başına yol açtığı değişim.
+Ayıklama sonuçları az değiştiriyor (Tablo~\ref{tab:leakage}). Aynı test kümelerine sahip düz bölmedeki
+çalıştırmalara göre eğitilmiş dedektörlerin F1 değeri hiçbir senaryoda \LeakMaxDeltaPurgeFOne{} değerinden,
+ROC-AUC değeri \LeakMaxDeltaPurgeAuc{} değerinden fazla değişmiyor. Eğitilmiş dedektör ve senaryo bileşimlerinin
+\LeakNCompPurgeFOne{} tanesinden \LeakNUpPurgeFOne{} tanesinde F1 yükseliyor, \LeakNDownPurgeFOne{} tanesinde
+düşüyor; yani kopyalar sonuçları tek bir yöne itmemiş. Ezberlenmiş bir kopyanın en çok fark yaratabileceği D'de
+Lexical-LR'nin F1 değeri düz bölmede \LeakDLexlrPlain{}, ayıklanmış bölmede \LeakDLexlrPurged{}; RoBERTa'nınki
+\LeakDTransPlain{} ve \LeakDTransPurged{}. Skorları eğitim verisine bağlı olmayan, yalnızca küçülen doğrulama
+bölmesindeki Platt eşlemesi yoluyla değişen eğitimsiz dedektörler \LeakMaxDeltaZeroPurge{} değerine kadar
+değişiyor; demek ki bu büyüklükte değişimler yalnızca doğrulama verisinin değişmesinden de doğuyor. Sıkı eşiği
+aşan test parçaları çıkarıldığında F1 en fazla \LeakMaxDeltaStrictFOne{} daha değişiyor.
 
-Kontrol eğitimleri de aynı sonucu veriyor (Tablo~\ref{tab:controls}). Yakın kopya raporlar bölmeden önce
-birleştirildiğinde Lexical-LR aynı üreticide F1 \CtrlGroupInLexlr{}, yerel
-üreticiler arasında \CtrlGroupCrossLexlr{} ve D'de \CtrlGroupDLexlr{} buluyor; bu makalede kullanılan bölmeyle bu
-değerler \CtrlSourceInLexlr{}, \CtrlSourceCrossLexlr{} ve \CtrlSourceDLexlr{}. Bir test raporunun diğer
-parçalarını eğitime sokan parça bazlı bölme de skorları yükseltmiyor (\CtrlChunkInLexlr{}, \CtrlChunkCrossLexlr{}
-ve \CtrlChunkDLexlr{}). Bu, tasarımın bir sonucu: bir insan parçası ve LLM sürümleri aynı olguları taşıyor ve her
-zaman aynı bölmeye düşüyor; bu yüzden bir raporun içeriğini bilmek iki sınıfı ayırmaya yaramıyor. Eğitim etiketleri
-karıştırıldığında iki dedektör de şans düzeyine iniyor (ROC-AUC \CtrlShuffledAucMin{} ile \CtrlShuffledAucMax{}
-arasında); yani etiket bilgisi modellere özellikler veya önişleme yoluyla ulaşmıyor. Diğer bütün sonuçlar özgün
-bölmeleri kullanıyor; kopya çiftleri depoda listeleniyor.
+Kontrol eğitimleri de aynı sonucu veriyor (Tablo~\ref{tab:controls}). Bir test raporunun diğer parçalarını eğitime
+sokan parça bazlı bölme Lexical-LR'nin skorlarını yükseltmiyor (aynı üreticide \CtrlChunkInLexlr{}, yerel
+üreticiler arasında \CtrlChunkCrossLexlr{}, D'de \CtrlChunkDLexlr{}; ayıklanmış bölmeyle \CtrlSourceInLexlr{},
+\CtrlSourceCrossLexlr{} ve \CtrlSourceDLexlr{}). Bu, tasarımın bir sonucu: bir insan parçası ve LLM sürümleri aynı
+olguları taşıyor ve her zaman aynı bölmeye düşüyor; bu yüzden bir raporun içeriğini bilmek iki sınıfı ayırmaya
+yaramıyor. Eğitim etiketleri karıştırıldığında iki dedektör de şans düzeyine iniyor (ROC-AUC \CtrlShuffledAucMin{}
+ile \CtrlShuffledAucMax{} arasında); yani etiket bilgisi modellere özellikler veya önişleme yoluyla ulaşmıyor.
 
 \subsection{Dilsel farklar}
 Tablo~\ref{tab:data} ve Şekil~\ref{fig:boxes} derlemi özetliyor. \NTests{} üretici-özellik karşılaştırmasının
@@ -559,7 +571,8 @@ kullanılmıyor.}
 Çalıştırmalar havuzlandığında, eğitim üreticisinden başka bir yerel üreticiye geçişte kaybedilen F1, Lexical-LR'de
 \HpCrossLexLR{} (\%95 GA [\HpLoCrossLexLR{}, \HpHiCrossLexLR{}]), RoBERTa'da \HpCrossTrans{} ([\HpLoCrossTrans{},
 \HpHiCrossTrans{}]). Holm düzeltmesinden sonra kayıp, eğitilmiş ve eğitimsiz \HpNCross{} dedektörün \HpSigCross{}
-tanesinde anlamlı. İstisnalar RoBERTa ve Binoculars. D'de kayıp Lexical-LR'de \HpDLexLR{}, RoBERTa'da \HpDTrans{},
+tanesinde anlamlı (Lexical-LR, Lexical-SVM ve Stilometri). RoBERTa, Koordinatör ve iki eğitimsiz dedektör yerel
+üreticiler arasında anlamlı bir F1 kaybetmiyor. D'de kayıp Lexical-LR'de \HpDLexLR{}, RoBERTa'da \HpDTrans{},
 Koordinatör'de \HpDCoord{} ve \HpND{} dedektörün hepsinde anlamlı. E'de \HpNE{} dedektörün \HpSigE{} tanesinde
 anlamlı; RoBERTa ve Koordinatör ölçülebilir bir kayıp vermiyor. Çalıştırma çalıştırma sınandığında,
 Benjamini-Hochberg düzeltmesinden sonra \HoneNCross{} yerel karşılaştırmanın \HoneSigCross{} tanesi, D ve E'deki
@@ -757,8 +770,8 @@ dışarıda bırak \GapLeaveOneOut{}, yeniden ifade koşulları). Daha düşük 
 metinlerinde daha büyük (Microsoft \GapMicrosoftAbc{}, Mandiant \GapMandiantAbc{}). Kayıplar kanıtı en çok
 değiştiren kaymalarda: kelimelerinin dörtte biri LLM'den gelen metinler (\GapTwoFiveLlmAbc{}), tek üreticiyle
 eğitimden sonra D (\GapDOneGenerator{}, \%95 GA [\GapLoDOneGenerator{}, \GapHiDOneGenerator{}]), tek ajanlı metinler
-(\GapSingleAgentAbc{}), yarısı LLM'den gelen metinler (\GapFiveZeroLlmAbc{}) ve üç üreticiyle eğitimden sonra D
-(\GapDAbc{}).
+(\GapSingleAgentAbc{}) ve yarısı LLM'den gelen metinler (\GapFiveZeroLlmAbc{}). Üç üreticiyle eğitimden sonra D'de de
+geride (\GapDAbc{}), ama fark anlamlı değil.
 
 Doğrulama verisinde yığın en çok Lexical-SVM (\WgtLexsvm{}) ve RoBERTa'ya (\WgtTrans{}), sonra Stilometri
 (\WgtStylo{}) ve Lexical-LR'ye (\WgtLexlr{}) ağırlık veriyor. LLM Yargıç negatif ağırlık alıyor (\WgtJudge{}). D'de
@@ -829,17 +842,18 @@ tanımlayıcıları açık açık yazan bir metin bu dedektörlere bir insan bil
 
 \emph{Kaçan ve yakalanan D metinleri.} Tablo~\ref{tab:contrast}, çalıştırmaların en az yarısında kaçan D metinlerini
 kalanlarla karşılaştırıyor (Lexical-LR için \FnNLexLR{} metne karşı \TpNLexLR{}, RoBERTa için \FnNTrans{} metne
-karşı \TpNTrans{}). Kaçan metinler daha uzun ($\delta$ Lexical-LR'de $\FnDeltaLexlrNWords$, RoBERTa'da
-$\FnDeltaTransNWords$, Koordinatör'de $\FnDeltaCoordNWords$) ve çeşitliliği daha düşük (tür-örnek oranında $\delta$
-sırasıyla $\FnDeltaLexlrTtr$, $\FnDeltaTransTtr$ ve $\FnDeltaCoordTtr$). Lexical-LR ve Koordinatör'de özel adları
-da daha çok ($\delta = \FnDeltaLexlrPosPropn$ ve $\FnDeltaCoordPosPropn$); RoBERTa'da böyle bir fark yok
-($\FnDeltaTransPosPropn$). Lexical-LR'de en büyük tek fark ipucu oranında. Kaçan metinler modelin LLM metniyle
-ilişkilendirdiği n-gram'lardan daha az ($\delta = \FnDeltaLexlrCuesLlm$), insan metniyle ilişkilendirdiklerinden
-daha çok ($\delta = \FnDeltaLexlrCuesHuman$) taşıyor. Regresyonda bir standart sapma fazla uzunluk, kaçırma
+karşı \TpNTrans{}). Kaçan metinlerin çeşitliliği daha düşük (tür-örnek oranında $\delta$ Lexical-LR'de
+$\FnDeltaLexlrTtr$, RoBERTa'da $\FnDeltaTransTtr$, Koordinatör'de $\FnDeltaCoordTtr$). Lexical-LR ve Koordinatör'de
+ayrıca daha uzunlar ($\delta = \FnDeltaLexlrNWords$ ve $\FnDeltaCoordNWords$) ve özel adları daha çok
+($\delta = \FnDeltaLexlrPosPropn$ ve $\FnDeltaCoordPosPropn$). RoBERTa'da bu iki fark tek başına anlamlı değil
+($\FnDeltaTransNWords$ ve $\FnDeltaTransPosPropn$). Lexical-LR'de en büyük tek fark ipucu oranında. Kaçan metinler
+modelin LLM metniyle ilişkilendirdiği n-gram'lardan daha az taşıyor ($\delta = \FnDeltaLexlrCuesLlm$); insan yönlü
+n-gram'lardaki fark ise küçük ve anlamlı değil ($\delta = \FnDeltaLexlrCuesHuman$). Regresyonda bir standart sapma fazla uzunluk, kaçırma
 olasılık oranını Lexical-LR'de \OrLexlrNWords{} (\%95 GA [\OrLoLexlrNWords{}, \OrHiLexlrNWords{}]), RoBERTa'da
 \OrTransNWords{}, Koordinatör'de \OrCoordNWords{} katına çıkarıyor. Yüksek özel ad oranı Lexical-LR'de
-(\OrLexlrPosPropn{}) ve Koordinatör'de (\OrCoordPosPropn{}) kaçırmayı artırıyor; RoBERTa'da açık bir etkisi yok
-(\OrTransPosPropn{}, [\OrLoTransPosPropn{}, \OrHiTransPosPropn{}]). Yüksek MTLD üçünde de kaçırma olasılığını
+(\OrLexlrPosPropn{}) ve Koordinatör'de (\OrCoordPosPropn{}) kaçırmayı artırıyor, RoBERTa'da daha az
+(\OrTransPosPropn{}, [\OrLoTransPosPropn{}, \OrHiTransPosPropn{}]). Diğerleri sabitken uzunluk RoBERTa'nın kaçırma
+olasılığını da artırıyor, oysa kaçan ve yakalanan metinler tek başına uzunlukta ayrışmıyor. Yüksek MTLD üçünde de kaçırma olasılığını
 düşürüyor (\OrLexlrMtld{}, \OrTransMtld{}, \OrCoordMtld{}). Şekil~\ref{fig:errbins}'in üst satırı aynı ilişkileri
 üçte birlik dilimlere göre kaçırma oranı olarak gösteriyor.
 
@@ -858,7 +872,7 @@ zamirleri D metinlerinin \ProfpctDFirst{} kadarında geçiyor. Bu, CISA parçala
 az. E metinlerinde oran \ProfpctEFirst{}, yani yerel üreticilerin aralığında (\ProfpctBFirst{} ile
 \ProfpctCFirst{} arası). Lexical-LR'nin LLM yönünde ağırlık verdiği n-gram'lar 100 kelimede D'de \ProfDCuesLlm{},
 E'de \ProfECuesLlm{}, yerel üreticilerde \ProfCCuesLlm{} ile \ProfACuesLlm{} arasında geçiyor (CISA:
-\ProfHumanCuesLlm{}). D, insan yönlü n-gram'ları da bütün üreticilerden çok kullanıyor (\ProfDCuesHuman{}). E insan
+\ProfHumanCuesLlm{}). E insan
 uzunluğunda yazıyor ama küçük modellerin \emph{we} ve \emph{our} kullanımını ve tavsiye sözcüklerini koruyor. Bu
 modellerle eğitilen bir dedektör onu tanıyor. D ise kişisiz yazıyor, tanımlayıcıları tekrarlıyor ve okura
 seslenmiyor. Onu hâlâ LLM metni olarak ele veren şey sözcük çeşitliliği (medyan MTLD \MedMtldD{}, CISA'da
@@ -1000,10 +1014,11 @@ CISA sayfaları revizyon tarihini gösteriyor, Microsoft üst verileri bir site 
 yazıları yeni bir sunucuya taşınmış. Bu yüzden belgeleri bildirim kodlarına, URL tarihlerine ve görünür yazar
 satırlarına göre tarihliyor ve sonraki güncellemeleri duyuran paragrafları siliyoruz. Tarih sınırından sonra böyle
 bir not olmadan değiştirilmiş bir paragraf fark edilmezdi. \emph{Kopya raporlar.} Toplayıcı, CISA'nın aynı
-bildirimi yeniden yayımladığı sayfaları ayrı kaynaklar olarak aldı; bu yüzden test parçalarının \LeakDupShareMin{}
-ile \LeakDupShareMax{} kadarının eğitimde veya doğrulamada yakın bir kopyası vardı. Özgün bölmeleri koruduk, çünkü
-bu parçaları çıkarmak hiçbir eğitilmiş dedektörün sonucunu \LeakMaxDeltaCleanFOne{} değerinden fazla değiştirmedi
-(Bölüm~\ref{sec:leakage}). Denetimimiz kelime 5-gramlarını karşılaştırıyor; başka bir raporu yeni sözcüklerle
+bildirimi yeniden yayımladığı sayfaları ayrı kaynaklar olarak aldı. Bunu ancak ilk tam çalıştırmadan sonra fark
+ettik; o çalıştırmada test parçalarının \LeakPlainDupShareMin{} ile \LeakPlainDupShareMax{} kadarının eğitimde veya
+doğrulamada yakın bir kopyası vardı. Burada raporlanan bütün sonuçlar ayıklanmış bölmelerle yapılan ikinci
+çalıştırmadan geliyor (Bölüm~\ref{sec:leakage}). Ayıklama doğrulama bölmelerini küçülttü (\LeakValMin{} ile
+\LeakValMax{} rapor). Denetimimiz kelime 5-gramlarını karşılaştırıyor; başka bir raporu yeni sözcüklerle
 yeniden anlatan bir raporu yakalamaz. \emph{Dışarıda kalan sayfalar.} Yerel antivirüs gömülü
 zararlı yazılım örneklerini işaretlediği için \NBlocked{} CISA analiz raporu okunamadı.
 
@@ -1025,7 +1040,7 @@ LLM etiketleri de bir kabul.
 \emph{Model seçimi.} RoBERTa tek ince ayarlı kodlayıcı, Gemma~2~9B tek yargıç. Hiperparametre araması yapılmadı.
 Binoculars 4 bit hassasiyetle ve skorlarını kaydıran kırpılmış bir gözlemci dağılımıyla, Fast-DetectGPT tek bir
 2.7B modelle çalıştı. İkisi de yazarlarının en güçlü ayarlarından küçük; Ghostbuster çalıştırılamadı.
-\emph{Kalibrasyon verisi.} Kalibratörler ve eşikler seed başına \LeakValMin{} kaynaktan oluşan doğrulama
+\emph{Kalibrasyon verisi.} Kalibratörler ve eşikler seed başına \LeakValMin{} ile \LeakValMax{} kaynaktan oluşan doğrulama
 kümelerinden geliyor. \LeakValHumanMin{} ile \LeakValHumanMax{} insan skorunun 99. yüzdeliği en
 büyük skora yakın; \%1 kuralı CISA test metninde
 \ThrInLexlrHumoneFpr{} ile \ThrInTransHumoneFpr{} arasında yanlış pozitif oranı veriyor. \emph{Hata analizi.}
@@ -1042,8 +1057,8 @@ yetiyor. Zorluk, dedektörün görmediği metinle başlıyor. Beş üreticinin a
 derlemimizde dedektörler bu metinleri doğru sıralamayı sürdürdü, kararı ise kaybetti: kişisiz yazan büyük ve
 görülmemiş bir üretici eşiğin altında, birinci şahısla yazılmış firma blogları eşiğin üstünde skor aldı. Bu
 üreticideki hatalar, yanlış pozitif oranı değişmeden ortaya çıkan yanlış negatiflerdi; alarm oranı hiçbir uyarı
-vermedi. Sızıntı denetimi, bu sonuçların eğitimdeki test raporlarına ya da onların yakın kopyalarına
-dayanmadığını doğruladı. Eğitim
+vermedi. Bu sonuçlar yakın kopya raporlardan ayıklanmış bölmelerden geliyor ve kaydedilmiş tahminler üzerindeki
+denetim, hiçbir test raporunun ya da kopyasının eğitimde kullanılmadığını doğruladı. Eğitim
 üreticilerini havuzlamak ya da eşiği insan skorlarından belirlemek ilk hatayı onardı, ikincisini büyüttü. Doğrulama
 verisiyle kalibrasyon ikisini de onarmadı. Bu bedeli ödetmeyen tek çare, eğitime ikinci bir yayıncının insan metnini
 katmaktı. Dedektör ajanlarının yığınlanmış birleşimi firma metinlerinde maliyetine değdi, en çok güvendiği üyenin

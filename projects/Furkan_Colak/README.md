@@ -143,10 +143,13 @@ All parameters live in [configs/generation.yaml](configs/generation.yaml) and
   (2,000 resamples) for intervals and paired comparisons. Runs are pooled before testing so that each Holm family
   stays small (one test per detector and target, per scenario, or per condition and detector); per-run tests are
   reported after Benjamini-Hochberg. Exact McNemar between detectors, Holm-corrected per detector pair.
-- Leakage checks: every saved prediction is checked against the split of its seed; every test text is compared with
-  all training and validation texts by word 5-gram containment (near-duplicate at 0.5, strict cut 0.2); all main
-  results are recomputed without near-duplicates; Lexical-LR and Stylometry are retrained with near-duplicate
-  reports joined, with a split by excerpt, and with shuffled labels.
+- Purging and leakage checks: reports whose excerpts are near-duplicates (word 5-gram containment of 0.5 or more)
+  are grouped, the test split of each seed is kept, and every training or validation report in a group with a test
+  report is removed (`data/processed/purged.csv`; the plain splits are in `splits_unpurged.json`). Every saved
+  prediction is then checked against the split of its seed, every test text is compared with all training and
+  validation texts under both splits (strict cut 0.2), the purged run is compared with the plain run
+  (`results/before_purge/`, same test sets), and Lexical-LR and Stylometry are retrained with a split by excerpt and
+  with shuffled labels.
 - Error analysis: categories with their base rate among all texts, misclassified against correctly classified texts
   (Cliff's delta), and logistic regressions with source-clustered errors, for missed D texts (single-generator
   models) and flagged Microsoft/Mandiant excerpts (ABC models).
@@ -157,49 +160,55 @@ Mean F1 over three seeds, models trained on one of A, B, C (full tables in [resu
 
 | Detector | In-generator | Cross (A-C) | D: gpt-oss-120b | E: Gemini |
 |---|---|---|---|---|
-| Lexical-LR | 0.997 | 0.966 | 0.329 | 0.961 |
-| Lexical-SVM | 0.998 | 0.976 | 0.327 | 0.969 |
-| Stylometry | 0.934 | 0.868 | 0.706 | 0.778 |
-| RoBERTa | 0.992 | 0.990 | 0.859 | 0.991 |
+| Lexical-LR | 0.997 | 0.966 | 0.336 | 0.960 |
+| Lexical-SVM | 0.998 | 0.975 | 0.351 | 0.969 |
+| Stylometry | 0.935 | 0.869 | 0.704 | 0.784 |
+| RoBERTa | 0.991 | 0.989 | 0.845 | 0.988 |
 | LLM Judge | 0.504 | 0.504 | 0.499 | 0.628 |
-| Fast-DetectGPT | 0.744 | 0.714 | 0.540 | 0.427 |
-| Binoculars | 0.817 | 0.806 | 0.365 | 0.307 |
-| Coordinator | 0.998 | 0.993 | 0.721 | 0.995 |
+| Fast-DetectGPT | 0.748 | 0.729 | 0.566 | 0.457 |
+| Binoculars | 0.815 | 0.804 | 0.390 | 0.330 |
+| Coordinator | 0.996 | 0.993 | 0.732 | 0.993 |
 
+- Leakage: CISA posts some advisories twice, under an advisory code and a descriptive address. On the plain source
+  split 9-14% of test excerpts had a near-duplicate in training or validation, some word for word. All results
+  above come from the purged splits, where no test excerpt has one (largest containment 0.46) and no scored test
+  row comes from a training or validation source (196,850 rows audited). Against the plain run F1 of the trained
+  detectors changes by at most 0.036 (13 up, 11 down of 30); a split by excerpt does not raise the scores, and
+  shuffled labels give ROC-AUC 0.45-0.54.
 - On D, ROC-AUC stays at 0.98 for the lexical models: the texts are ranked correctly but fall below the 0.5
-  threshold. Training on all three local generators raises Lexical-LR on D to 0.883 and RoBERTa to 0.958; a threshold
-  set at the 95th percentile of validation human scores raises Lexical-LR to 0.886 without any D text.
-- Both remedies cost false alarms on another publisher. Lexical-LR flags 0.3% of Microsoft and Mandiant human
-  excerpts when trained on one generator, 4-5% on two and 14-15% on three (RoBERTa: 8-9%, 14-16%, 16-20%; CISA
-  stays at 0-4%). Adding one vendor publisher to training brings the other below 6%. The training-free detectors
+  threshold. Training on all three local generators raises Lexical-LR on D to 0.888 and RoBERTa to 0.947; a threshold
+  set at the 95th percentile of validation human scores raises Lexical-LR to 0.869 without any D text.
+- Both remedies cost false alarms on another publisher. Lexical-LR flags 0.3-0.4% of Microsoft and Mandiant human
+  excerpts when trained on one generator, 5-6% on two and 14-15% on three (RoBERTa: 9-11%, 14-17%, 21-23%; CISA
+  stays at 1-6%). Adding one vendor publisher to training brings the other to 5% or less. The training-free detectors
   show fewer false positives on vendor text than on CISA text.
 - On D the trained detectors fail in one direction: after single-generator training their false positive rate on
-  CISA text stays at the in-generator value (0-1.4%) while the false negative rate rises to 0.79 (Lexical-LR), 0.22
-  (RoBERTa) and 0.41 (Coordinator). ROC-AUC stays at 0.98-0.99, and only the Brier score and ECE register the shift
-  (RoBERTa ECE 0.013 in-generator, 0.113 on D). The human 5% threshold brings the false negative rate down to
-  0.07-0.18. Fast-DetectGPT and Binoculars lose the ranking itself (AUC 0.70-0.73 on D), which no threshold repairs.
-- Leakage: no scored test row comes from a training or validation source (196,850 rows audited). CISA posts some
-  advisories twice, under an advisory code and a descriptive address, so 9-14% of test excerpts have a near-duplicate
-  in training or validation. Without them no F1 of a trained detector changes by more than 0.017; a split by excerpt
-  does not raise the scores, and shuffled labels give ROC-AUC 0.43-0.53.
+  CISA text stays at the in-generator value (0-1.5%) while the false negative rate rises to 0.79 (Lexical-LR), 0.23
+  (RoBERTa) and 0.40 (Coordinator). ROC-AUC stays at 0.98-0.99, and of the threshold-free measures only the Brier
+  score and ECE register the shift (RoBERTa ECE 0.015 in-generator, 0.120 on D). The human 5% threshold brings the
+  false negative rate down to 0.06-0.20. Fast-DetectGPT and Binoculars lose the ranking itself (AUC 0.70-0.73 on D),
+  which no threshold repairs.
 - Consistency: `verify` recomputes all 2,166 rows of `results/metrics_all.csv` from the per-text predictions with
-  separate code (largest difference 0), rebuilds the 2,360 macros and 38 tables of the papers from `results/` and
-  finds them identical, and writes `results/manifest.csv` (SHA-256 of 239 result, data and figure files, LF line
+  separate code (largest difference 0), rebuilds the 2,418 macros and 38 tables of the papers from `results/` and
+  finds them identical, and writes `results/manifest.csv` (SHA-256 of the result, data and figure files, LF line
   endings) to check any copy of the repository against.
-- Error analysis: missed D texts are longer, less diverse and richer in proper nouns than caught ones; D uses the
-  first person in 10% of its texts (CISA 14%, Gemini 45%, local generators 39-61%). Flagged vendor excerpts are more
-  diverse, use the first person more and are shorter than the ones that pass. The two failures mirror each other.
+- Error analysis: missed D texts are less diverse than caught ones and, for Lexical-LR and the Coordinator, longer
+  and richer in proper nouns; D uses the first person in 10% of its texts (CISA 14%, Gemini 45%, local generators
+  39-61%). Flagged vendor excerpts are more diverse, use the first person more and are shorter than the ones that
+  pass. The two failures mirror each other.
 - Paraphrasing, back-translation and a "humanize" prompt leave the trained detectors' recall at 0.99 or above, but
-  lower Fast-DetectGPT and Binoculars. Single-agent rewriting from the source (recall 0.60-0.72) and texts with 25%
-  LLM sentences (0.17-0.37) are missed.
+  lower Fast-DetectGPT and Binoculars. Single-agent rewriting from the source (recall 0.57-0.73) and texts with 25%
+  LLM sentences (0.16-0.43) are missed.
 - Calibration fitted on validation data improves in-generator probabilities and makes them worse on D (NLL of
   Lexical-LR 0.57 raw, 1.82 after Platt scaling).
-- The Coordinator beats RoBERTa in 13 of 22 scenarios and loses in 5 (D, single-agent texts, texts with 25% and 50%
-  LLM sentences), because it weights Lexical-SVM heavily and that member collapses under generator shift.
-- On texts with 50% LLM sentences RoBERTa finds 95% when the LLM block comes first and 27% when it comes last; it
+- The Coordinator beats RoBERTa in 13 of 22 scenarios and loses in 4 (D after one training generator, single-agent
+  texts, texts with 25% and 50% LLM sentences), because it weights Lexical-SVM heavily and that member collapses under
+  generator shift.
+- On texts with 50% LLM sentences RoBERTa finds 97% when the LLM block comes first and 34% when it comes last; it
   reads only the first 256 tokens.
 
-The paper takes every number from `paper/numbers.tex`; the figures above are copied from it on 2026-11-12.
+The paper takes every number from `paper/numbers.tex`; the figures above are copied from it on 2026-11-12 (second
+run, purged splits).
 
 F1 per training set (rows) and test generator (columns), mean of three seeds:
 

@@ -1,0 +1,34 @@
+seed,source_id,from,action
+42,cisa-aa22-174a,train,removed
+42,cisa-ar20-198b,train,removed
+42,cisa-ar20-198c,train,removed
+42,cisa-ar20-216a,train,removed
+42,cisa-ar20-239b,train,removed
+42,cisa-ar22-277b,train,removed
+42,cisa-control-system-defense-know-opponent,train,removed
+42,cisa-hidden-cobra-north-korean-remote-administration-tool-fallchill,train,removed
+42,cisa-protecting-against-cyber-threats-managed-service-providers-and-their-customers,val,removed
+42,cisa-aa22-249a-0,val,moved to train
+42,cisa-advanced-persistent-threat-activity-targeting-energy-and-other-critical-infrastructure-sectors-20171020,val,moved to train
+123,cisa-aa22-074a,val,removed
+123,cisa-advanced-persistent-threat-activity-targeting-energy-and-other-critical-infrastructure-sectors-20180308,train,removed
+123,cisa-control-system-defense-know-opponent,train,removed
+123,cisa-dnssec-key-signing-key-rollover-postponed,train,removed
+123,cisa-protecting-against-cyber-threats-managed-service-providers-and-their-customers,train,removed
+123,cisa-aa22-110a,val,moved to train
+123,cisa-aa22-174a,val,moved to train
+123,cisa-aa22-294a,val,moved to train
+123,cisa-ar20-198c,val,moved to train
+123,cisa-ar22-277b,val,moved to train
+2024,cisa-aa22-249a,train,removed
+2024,cisa-ar20-198a,train,removed
+2024,cisa-ar20-198c,train,removed
+2024,cisa-ar20-216a,train,removed
+2024,cisa-ar20-239b,train,removed
+2024,cisa-ar20-239c,train,removed
+2024,cisa-ar20-303b,train,removed
+2024,cisa-ar22-277b,train,removed
+2024,cisa-hidden-cobra-north-korean-trojan-volgmer,train,removed
+2024,cisa-understanding-and-mitigating-russian-state-sponsored-cyber-threats-us-critical-infrastructure,val,removed
+2024,cisa-aa22-265a,val,moved to train
+2024,cisa-advanced-persistent-threat-activity-targeting-energy-and-other-critical-infrastructure-sectors-20171020,val,moved to train

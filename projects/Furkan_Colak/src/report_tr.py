@@ -174,25 +174,31 @@ TR_EXT = {
     " words, mean P(LLM) ": " kelime, ortalama P(LLM) ",
     ". Generator ": ". Üretici ",
     # leakage.tex
-    "Main results on all test excerpts and without those whose human or LLM text has a near-duplicate in the "
-    "training or validation split of the same seed (containment of word 5-grams":
-        "Ana sonuçlar, bütün test parçaları üzerinde ve insan ya da LLM metninin aynı seed'in eğitim veya doğrulama "
-        "bölmesinde yakın kopyası bulunan parçalar çıkarılarak (kelime 5-gramlarının kapsanma oranı",
-    "; strict: ": "; sıkı: ",
-    "). Mean test-set size: ": "). Ortalama test kümesi büyüklüğü: ",
-    " texts. F1 is mean $\\pm$ std over three seeds.": " metin. F1, üç seed üzerinden ortalama $\\pm$ std.",
+    "Main results before and after purging. Plain split: by source id only, with near-duplicates of some test "
+    "excerpts in training or validation. Purged: the same test sets, with every training and validation report "
+    "removed that holds a near-duplicate of a test excerpt (containment of word 5-grams $\\geq$ ":
+        "Ayıklama öncesi ve sonrası ana sonuçlar. Düz bölme: yalnızca kaynak kimliğine göre; bazı test parçalarının "
+        "yakın kopyası eğitimde veya doğrulamada. Ayıklanmış: aynı test kümeleri; bir test parçasının yakın kopyasını "
+        "içeren her eğitim ve doğrulama raporu çıkarılmış (kelime 5-gramlarının kapsanma oranı $\\geq$ ",
+    "); all other results in this paper use it. Strict: the purged run without the test excerpts that still reach a "
+    "containment of ":
+        "); bu makaledeki diğer bütün sonuçlar bu bölmeyi kullanır. Sıkı: ayıklanmış çalıştırma, kapsanma oranı "
+        "hâlâ şu değere ulaşan test parçaları olmadan: ",
+    ". Mean test-set size: ": ". Ortalama test kümesi büyüklüğü: ",
+    " texts, ": " metin, sıkı eşikte ",
+    " under the strict cut. F1 is mean $\\pm$ std over three seeds.": ". F1, üç seed üzerinden ortalama $\\pm$ std.",
     "Setting & Detector & \\multicolumn{3}{c}{F1}": "Senaryo & Dedektör & \\multicolumn{3}{c}{F1}",
-    " & & All & No dup. & Strict & All & No dup. & Strict": " & & Tümü & Kopyasız & Sıkı & Tümü & Kopyasız & Sıkı",
+    " & & Plain split & Purged & Purged, strict & Plain split & Purged & Purged, strict":
+        " & & Düz bölme & Ayıklanmış & Ayıklanmış, sıkı & Düz bölme & Ayıklanmış & Ayıklanmış, sıkı",
     # controls.tex
     "Control trainings, F1 at threshold 0.5 (mean over three seeds and the training generators A, B, C). Under the "
-    "two alternative splits the test sets differ from the main ones, and D and E cover fewer of their excerpts.":
-        "Kontrol eğitimleri, eşik 0.5'te F1 (üç seed ve A, B, C eğitim üreticileri üzerinden ortalama). İki alternatif "
+    "split by excerpt the test sets differ from the main ones, and D and E cover fewer of their excerpts.":
+        "Kontrol eğitimleri, eşik 0.5'te F1 (üç seed ve A, B, C eğitim üreticileri üzerinden ortalama). Parça bazlı "
         "bölmede test kümeleri ana deneydekinden farklıdır ve D ile E bu kümelerin daha az parçasını kapsar.",
     "Split & Detector & In & Cross & D & E": "Bölme & Dedektör & Aynı & Çapraz & D & E",
-    "By report (used)": "Rapor bazlı (kullanılan)",
-    "Near-duplicate reports joined": "Yakın kopya raporlar birleşik",
+    "By report, purged (used)": "Rapor bazlı, ayıklanmış (kullanılan)",
     "By excerpt (leaky)": "Parça bazlı (sızdıran)",
-    "By report, labels shuffled": "Rapor bazlı, etiketler karışık",
+    "Purged, labels shuffled": "Ayıklanmış, etiketler karışık",
     # newgen.tex
     "Errors, ranking and probability quality on the unseen generators D and E, next to the in-generator reference. "
     "FPR is measured on the CISA excerpts of each test set and FNR on the LLM texts. ECE and Brier use the "

@@ -7,6 +7,7 @@ import unicodedata
 import numpy as np
 import pandas as pd
 
+from src.dedup import dup_groups, purge
 from src.settings import DATA
 
 RAW = DATA / "raw" / "human_chunks.jsonl"
@@ -209,8 +210,14 @@ def run(cfg: dict) -> None:
     df["len_ratio"] = df.n_words / df.chunk_id.map(human_len)
 
     df.to_parquet(PROCESSED / "dataset.parquet", index=False)
-    splits = make_splits(df.source_id.tolist(), cfg["seeds"], cfg["split"])
+    # The plain source split is kept next to the purged one, so the leakage stage can show what purging removed.
+    plain = make_splits(df.source_id.tolist(), cfg["seeds"], cfg["split"])
+    (PROCESSED / "splits_unpurged.json").write_text(json.dumps(plain, indent=1), encoding="utf-8")
+    groups = dup_groups(df[df.label == 0], cfg["leakage"]["shingle"], cfg["leakage"]["dup"])
+    splits, log = purge(plain, groups)
     (PROCESSED / "splits.json").write_text(json.dumps(splits, indent=1), encoding="utf-8")
+    pd.DataFrame(log).to_csv(PROCESSED / "purged.csv", index=False)
+    print(f"purged: {len(log)} source moves or removals over all seeds (data/processed/purged.csv)")
 
     print(df.groupby(["generator", "mode"]).agg(n=("id", "size"), words=("n_words", "median")).to_string())
     s = splits[str(cfg["seeds"][0])]

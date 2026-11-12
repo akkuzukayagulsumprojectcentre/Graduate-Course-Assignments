@@ -1,7 +1,9 @@
 """Experiment runner (detect stage). Writes per-text probabilities to results/preds and results/preds_ext."""
 import asyncio
 import json
+import os
 import time
+from contextlib import contextmanager, nullcontext
 from itertools import combinations
 
 import httpx
@@ -11,9 +13,12 @@ from sklearn.linear_model import LogisticRegression
 
 from src.detectors import (JUDGE, Combined, Coordinator, LexicalLR, LexicalSVM, Stylometry, Transformer, _judge)
 from src.features import ALL, GROUPS
-from src.settings import DATA, RESULTS, env
+from src.settings import CACHE, DATA, RESULTS, env
 
 PROCESSED = DATA / "processed"
+GPU_LOCK = CACHE / "gpu.lock"  # outside OneDrive, which locks files in the repository
+# Parts of the stage. LLMCTI_DETECT_PARTS runs a subset in its own process; "merge" then joins their logs.
+PARTS = ["ablations", "main", "augmented"]
 PREDS = RESULTS / "preds"
 PREDS_EXT = RESULTS / "preds_ext"
 ZEROSHOT = PROCESSED / "zeroshot.parquet"
@@ -24,6 +29,22 @@ KEEP = ["id", "source_id", "generator", "mode", "template", "topic", "label", "l
 BASE: set[str] = set()  # dataset columns; anything else in a frame is a detector probability
 PASS_THROUGH = {"llm_judge", *ZS_SCORES}
 LOGS: dict[str, list[dict]] = {"coord_weights": [], "fit_times": []}
+
+
+@contextmanager
+def gpu():
+    """One RoBERTa on the GPU at a time when detect runs as parallel parts (8 GB holds one fine-tune)."""
+    while True:
+        try:
+            fd = os.open(GPU_LOCK, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            break
+        except FileExistsError:
+            time.sleep(1)
+    try:
+        yield
+    finally:
+        os.close(fd)
+        GPU_LOCK.unlink(missing_ok=True)
 
 
 def subset(df: pd.DataFrame, sources: list[str], gens: list[str], mode: str = "multi") -> pd.DataFrame:
@@ -54,14 +75,15 @@ def run_members(cfg: dict, train, val, tests: dict, seed: int, tag: dict) -> dic
     }
     out = {"val": val.copy(), **{k: v.copy() for k, v in tests.items()}}
     for name, agent in agents.items():
-        t0 = time.perf_counter()
-        agent.fit(train)
-        LOGS["fit_times"].append({**tag, "seed": seed, "detector": name, "n_train": len(train),
-                                  "fit_s": time.perf_counter() - t0})
-        for k in out:
-            out[k][name] = agent.predict(out[k])
-        if isinstance(agent, Transformer):
-            agent.free()
+        with gpu() if isinstance(agent, Transformer) else nullcontext():
+            t0 = time.perf_counter()
+            agent.fit(train)
+            LOGS["fit_times"].append({**tag, "seed": seed, "detector": name, "n_train": len(train),
+                                      "fit_s": time.perf_counter() - t0})
+            for k in out:
+                out[k][name] = agent.predict(out[k])
+            if isinstance(agent, Transformer):
+                agent.free()
     members = [m for m in p["coordinator"]["members"] if m in out["val"]]
     coord = Coordinator(members, seed).fit(out["val"])
     LOGS["coord_weights"] += [{**tag, "seed": seed, "member": m, "coef": c, "intercept": coord.clf.intercept_[0]}
@@ -190,11 +212,12 @@ def ablations(df, splits, cfg):
             agents |= {f"group_{n}": Stylometry(p["stylometry_xgb"], seed, cols) for n, cols in GROUPS.items()}
             frames = {k: v.copy() for k, v in te.items()}
             for name, agent in agents.items():
-                agent.fit(tr)
-                for k in frames:
-                    frames[k][name] = agent.predict(frames[k])
-                if isinstance(agent, Transformer):
-                    agent.free()
+                with gpu() if isinstance(agent, Transformer) else nullcontext():
+                    agent.fit(tr)
+                    for k in frames:
+                        frames[k][name] = agent.predict(frames[k])
+                    if isinstance(agent, Transformer):
+                        agent.free()
             save(frames, "abl-features", [g], seed)
 
             # Generation mode: train on multi-agent texts, test on single-agent texts of each generator.
@@ -227,6 +250,10 @@ def with_scores(d: pd.DataFrame, judge: pd.DataFrame, zs: pd.DataFrame | None) -
 
 
 def run(cfg: dict) -> None:
+    parts = env("LLMCTI_DETECT_PARTS", ",".join(PARTS)).split(",")
+    if parts == ["merge"]:
+        merge()
+        return
     df = pd.read_parquet(PROCESSED / "dataset.parquet")
     feats = pd.read_parquet(PROCESSED / "features.parquet")
     df = df.drop(columns=[c for c in ALL if c in df.columns]).merge(feats[["id"] + ALL], on="id")
@@ -247,9 +274,24 @@ def run(cfg: dict) -> None:
     TRAIN_GENS[:] = cfg["train_generators"]
     TEST_GENS[:] = sorted(set(df.generator) - {"human"})
 
-    importance(df, splits, cfg)
-    ablations(df, splits, cfg)
-    main_experiments(df, extra, splits, cfg)
-    augmented_experiments(df, extra, splits, cfg)
+    if "ablations" in parts:
+        importance(df, splits, cfg)
+        ablations(df, splits, cfg)
+    if "main" in parts:
+        main_experiments(df, extra, splits, cfg)
+    if "augmented" in parts:
+        augmented_experiments(df, extra, splits, cfg)
+    suffix = "" if parts == PARTS else "__" + "-".join(parts)
     for name, rows in LOGS.items():
-        pd.DataFrame(rows).to_csv(RESULTS / f"{name}.csv", index=False)
+        if rows:  # the ablations part logs nothing
+            pd.DataFrame(rows).to_csv(RESULTS / f"{name}{suffix}.csv", index=False)
+
+
+def merge() -> None:
+    """Join the logs of parts that ran in separate processes, in the order of a serial run."""
+    for name in LOGS:
+        files = [RESULTS / f"{name}__{p}.csv" for p in PARTS]
+        parts = [pd.read_csv(f) for f in files if f.exists()]
+        pd.concat(parts, ignore_index=True).to_csv(RESULTS / f"{name}.csv", index=False)
+        for f in files:
+            f.unlink(missing_ok=True)

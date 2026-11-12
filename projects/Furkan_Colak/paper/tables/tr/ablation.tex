@@ -1,0 +1,29 @@
+\begin{table*}[t]
+\centering
+\footnotesize
+\caption{Ablasyonlar, F1 (seed'ler üzerinden ortalama $\pm$ std; A, B veya C'den biriyle eğitim).}
+\label{tab:ablation}
+\begin{tabular}{lcccc}
+\toprule
+Koşul & Aynı üretici & Çapraz (A--C) & D & E \\
+\midrule
+Yalnız TF-IDF (LR) & 0.997 $\pm$ 0.004 & 0.966 $\pm$ 0.009 & 0.336 $\pm$ 0.032 & 0.960 $\pm$ 0.013 \\
+Yalnız stilometri (XGB) & 0.935 $\pm$ 0.009 & 0.869 $\pm$ 0.010 & 0.704 $\pm$ 0.010 & 0.784 $\pm$ 0.015 \\
+TF-IDF + stilometri (LR) & 0.966 $\pm$ 0.006 & 0.921 $\pm$ 0.011 & 0.730 $\pm$ 0.067 & 0.838 $\pm$ 0.033 \\
+LR, çıktı temizliği kapalı & 0.997 $\pm$ 0.004 & 0.965 $\pm$ 0.011 & 0.342 $\pm$ 0.030 & 0.956 $\pm$ 0.014 \\
+LR, kurum adları maskeli & 0.996 $\pm$ 0.004 & 0.968 $\pm$ 0.008 & 0.346 $\pm$ 0.028 & 0.966 $\pm$ 0.014 \\
+RoBERTa, kurum adları maskeli & 0.987 $\pm$ 0.007 & 0.985 $\pm$ 0.007 & 0.882 $\pm$ 0.005 & 0.987 $\pm$ 0.008 \\
+Stilometri: yalnız uzunluk & 0.871 $\pm$ 0.008 & 0.792 $\pm$ 0.007 & 0.504 $\pm$ 0.034 & 0.675 $\pm$ 0.028 \\
+Stilometri: yalnız sözcük çeşitliliği & 0.842 $\pm$ 0.025 & 0.815 $\pm$ 0.023 & 0.865 $\pm$ 0.020 & 0.872 $\pm$ 0.029 \\
+Stilometri: yalnız noktalama & 0.820 $\pm$ 0.033 & 0.767 $\pm$ 0.026 & 0.487 $\pm$ 0.090 & 0.590 $\pm$ 0.063 \\
+Stilometri: yalnız tekrar & 0.795 $\pm$ 0.023 & 0.770 $\pm$ 0.029 & 0.818 $\pm$ 0.028 & 0.766 $\pm$ 0.037 \\
+Stilometri: yalnız POS & 0.801 $\pm$ 0.021 & 0.748 $\pm$ 0.024 & 0.768 $\pm$ 0.050 & 0.840 $\pm$ 0.046 \\
+Koordinatör, tüm ajanlar & 0.996 $\pm$ 0.001 & 0.993 $\pm$ 0.005 & 0.732 $\pm$ 0.089 & 0.993 $\pm$ 0.010 \\
+Koordinatör, Lexical-LR olmadan & 0.996 $\pm$ 0.001 & 0.993 $\pm$ 0.005 & 0.736 $\pm$ 0.088 & 0.993 $\pm$ 0.010 \\
+Koordinatör, Lexical-SVM olmadan & 0.994 $\pm$ 0.001 & 0.989 $\pm$ 0.003 & 0.775 $\pm$ 0.081 & 0.988 $\pm$ 0.010 \\
+Koordinatör, LLM Yargıç olmadan & 0.996 $\pm$ 0.001 & 0.993 $\pm$ 0.005 & 0.738 $\pm$ 0.097 & 0.993 $\pm$ 0.010 \\
+Koordinatör, Stilometri olmadan & 0.997 $\pm$ 0.001 & 0.994 $\pm$ 0.001 & 0.718 $\pm$ 0.107 & 0.989 $\pm$ 0.013 \\
+Koordinatör, RoBERTa olmadan & 0.996 $\pm$ 0.004 & 0.968 $\pm$ 0.004 & 0.469 $\pm$ 0.101 & 0.957 $\pm$ 0.008 \\
+\bottomrule
+\end{tabular}
+\end{table*}

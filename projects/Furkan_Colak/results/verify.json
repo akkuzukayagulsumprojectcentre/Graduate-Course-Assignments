@@ -1,0 +1,12 @@
+{
+ "metric_rows": 2166,
+ "metric_rows_saved": 2166,
+ "metric_max_abs_diff": 0.0,
+ "metric_mismatches": [],
+ "n_metric_mismatches": 0,
+ "macros": 2418,
+ "tables": 38,
+ "report_identical": true,
+ "report_changed": [],
+ "manifest_files": 263
+}

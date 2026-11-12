@@ -1,0 +1,29 @@
+\begin{table*}[t]
+\centering
+\footnotesize
+\caption{Error categories over all seeds: count and share of the errors of each detector. Categories are mutually exclusive and assigned by the first rule that applies (Section~\ref{sec:errors}); a text counts once per run in which it is misclassified. ``All texts'' is the share of the category among all texts of the group, errors or not, so a category is over-represented among the errors only when its share exceeds this. FN and CISA rows: models trained on one generator; vendor rows: models trained on ABC.}
+\label{tab:errors}
+\begin{tabular}{llcccc}
+\toprule
+Error & Category & All texts & Lexical-LR & RoBERTa & Coordinator \\
+\midrule
+FN, D & impersonal, human length & 76\% & 425 (76\%) & 112 (69\%) & 198 (71\%) \\
+FN, D & cites an agency & 11\% & 60 (11\%) & 17 (10\%) & 30 (11\%) \\
+FN, D & first person, still missed & 10\% & 44 (8\%) & 16 (10\%) & 22 (8\%) \\
+FN, D & unsupported technical detail & 4\% & 30 (5\%) & 17 (10\%) & 28 (10\%) \\
+FN, other generators & first person, still missed & 46\% & 47 (32\%) & 3 (17\%) & 10 (37\%) \\
+FN, other generators & impersonal, short & 30\% & 43 (29\%) & 1 (6\%) & 2 (7\%) \\
+FN, other generators & cites an agency & 7\% & 26 (18\%) & 9 (50\%) & 8 (30\%) \\
+FN, other generators & impersonal, human length & 17\% & 30 (20\%) & 5 (28\%) & 7 (26\%) \\
+FN, other generators & unsupported technical detail & 0\% & 1 (1\%) & 0 & 0 \\
+FP, CISA & first person & 15\% & 0 & 4 (36\%) & 2 (100\%) \\
+FP, CISA & few proper nouns & 19\% & 0 & 3 (27\%) & 0 \\
+FP, CISA & other & 28\% & 0 & 2 (18\%) & 0 \\
+FP, CISA & product vulnerability notice & 9\% & 0 & 2 (18\%) & 0 \\
+FP, vendor blogs & first person & 75\% & 174 (89\%) & 255 (90\%) & 58 (83\%) \\
+FP, vendor blogs & few proper nouns & 16\% & 22 (11\%) & 23 (8\%) & 12 (17\%) \\
+FP, vendor blogs & other & 7\% & 0 & 2 (1\%) & 0 \\
+FP, vendor blogs & product vulnerability notice & 2\% & 0 & 2 (1\%) & 0 \\
+\bottomrule
+\end{tabular}
+\end{table*}

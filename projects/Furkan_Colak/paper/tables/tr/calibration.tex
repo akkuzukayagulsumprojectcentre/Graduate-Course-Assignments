@@ -1,0 +1,25 @@
+\begin{table*}[t]
+\centering
+\scriptsize\setlength{\tabcolsep}{2.5pt}
+\caption{Test verisinde olasılık kalitesi, A, B veya C'den biriyle eğitim (üç seed üzerinden ortalama $\pm$ std). Kalibratörler yalnızca doğrulama verisiyle kurulur.}
+\label{tab:calibration}
+\begin{tabular}{@{}ll@{\ }ccccccccc@{}}
+\toprule
+Dedektör & Kalibratör & \multicolumn{3}{c}{Aynı üretici} & \multicolumn{3}{c}{D: gpt-oss-120b} & \multicolumn{3}{c}{E: Gemini} \\
+ & & Brier & ECE & NLL & Brier & ECE & NLL & Brier & ECE & NLL \\
+\midrule
+Lexical-LR & Ham & 0.036$\pm$0.002 & 0.170$\pm$0.004 & 0.194$\pm$0.005 & 0.201$\pm$0.007 & 0.311$\pm$0.012 & 0.571$\pm$0.015 & 0.074$\pm$0.004 & 0.245$\pm$0.007 & 0.296$\pm$0.010 \\
+Lexical-LR & Platt & 0.002$\pm$0.002 & 0.004$\pm$0.002 & 0.014$\pm$0.018 & 0.269$\pm$0.084 & 0.297$\pm$0.083 & 1.822$\pm$0.363 & 0.015$\pm$0.016 & 0.027$\pm$0.018 & 0.056$\pm$0.056 \\
+Lexical-LR & Sıcaklık & 0.003$\pm$0.004 & 0.008$\pm$0.007 & 0.027$\pm$0.034 & 0.348$\pm$0.062 & 0.377$\pm$0.034 & 2.892$\pm$1.756 & 0.030$\pm$0.009 & 0.051$\pm$0.014 & 0.139$\pm$0.054 \\
+Lexical-LR & İzotonik & 0.003$\pm$0.002 & 0.007$\pm$0.002 & 0.018$\pm$0.020 & 0.241$\pm$0.057 & 0.287$\pm$0.065 & 2.050$\pm$0.526 & 0.015$\pm$0.013 & 0.036$\pm$0.022 & 0.058$\pm$0.050 \\
+RoBERTa & Ham & 0.007$\pm$0.001 & 0.015$\pm$0.002 & 0.032$\pm$0.005 & 0.104$\pm$0.032 & 0.120$\pm$0.032 & 0.406$\pm$0.133 & 0.010$\pm$0.004 & 0.018$\pm$0.004 & 0.039$\pm$0.018 \\
+RoBERTa & Platt & 0.007$\pm$0.002 & 0.010$\pm$0.003 & 0.037$\pm$0.002 & 0.178$\pm$0.068 & 0.190$\pm$0.070 & 1.755$\pm$1.064 & 0.019$\pm$0.015 & 0.024$\pm$0.014 & 0.128$\pm$0.128 \\
+RoBERTa & Sıcaklık & 0.008$\pm$0.001 & 0.013$\pm$0.005 & 0.044$\pm$0.020 & 0.111$\pm$0.038 & 0.122$\pm$0.032 & 0.832$\pm$0.562 & 0.010$\pm$0.004 & 0.018$\pm$0.006 & 0.062$\pm$0.026 \\
+RoBERTa & İzotonik & 0.006$\pm$0.002 & 0.008$\pm$0.003 & 0.042$\pm$0.019 & 0.168$\pm$0.065 & 0.192$\pm$0.068 & 1.746$\pm$1.272 & 0.016$\pm$0.012 & 0.022$\pm$0.014 & 0.131$\pm$0.156 \\
+Koordinatör & Ham & 0.002$\pm$0.001 & 0.006$\pm$0.000 & 0.009$\pm$0.002 & 0.161$\pm$0.048 & 0.209$\pm$0.048 & 0.594$\pm$0.210 & 0.007$\pm$0.007 & 0.023$\pm$0.010 & 0.031$\pm$0.020 \\
+Koordinatör & Platt & 0.003$\pm$0.001 & 0.005$\pm$0.002 & 0.023$\pm$0.012 & 0.180$\pm$0.051 & 0.202$\pm$0.045 & 1.374$\pm$0.458 & 0.007$\pm$0.006 & 0.013$\pm$0.005 & 0.035$\pm$0.019 \\
+Koordinatör & Sıcaklık & 0.004$\pm$0.001 & 0.005$\pm$0.002 & 0.033$\pm$0.018 & 0.191$\pm$0.058 & 0.203$\pm$0.051 & 2.124$\pm$0.790 & 0.008$\pm$0.008 & 0.013$\pm$0.008 & 0.059$\pm$0.053 \\
+Koordinatör & İzotonik & 0.003$\pm$0.000 & 0.006$\pm$0.002 & 0.026$\pm$0.014 & 0.172$\pm$0.045 & 0.206$\pm$0.050 & 1.450$\pm$0.405 & 0.007$\pm$0.005 & 0.015$\pm$0.006 & 0.038$\pm$0.024 \\
+\bottomrule
+\end{tabular}
+\end{table*}

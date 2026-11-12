@@ -1,0 +1,3 @@
+{
+ "tech_pattern": "\\b[\\w-]+\\.(?:exe|dll|zip|docx?|xlsx?|pdf|ps1|bat|js|vbs|ini|dat|tmp)\\b|\\bCVE-\\d{4}-\\d+\\b|\\b\\d{1,3}(?:\\.\\d{1,3}){3}\\b|\\b0x[0-9a-fA-F]+\\b|\\bport \\d+\\b|\\bT\\d{4}(?:\\.\\d{3})?\\b"
+}

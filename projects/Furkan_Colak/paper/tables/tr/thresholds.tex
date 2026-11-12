@@ -1,0 +1,27 @@
+\begin{table*}[t]
+\centering
+\footnotesize
+\caption{Karar kuralının etkisi, A, B veya C'den biriyle eğitim. Bütün eşikler doğrulama verisinde belirlenir. Sözde görülmemiş kural, ne eğitimde ne de testte bulunan yerel üreticilerin doğrulama metinlerini kullanır. İnsan \%1 ve \%5 kuralları yalnızca doğrulama insan skorlarını kullanır.}
+\label{tab:thresholds}
+\begin{tabular}{llccccccc}
+\toprule
+Dedektör & Eşik kuralı & F1, aynı & F1, çapraz & F1, D & Duyarlılık, D & F1, E & F1, dış & FPR, dış \\
+\midrule
+Lexical-LR & Sabit 0.5 & 0.997$\pm$0.004 & 0.966$\pm$0.009 & 0.336$\pm$0.032 & 0.213 & 0.960$\pm$0.013 & 0.982$\pm$0.001 & 0.004 \\
+Lexical-LR & Doğrulama F1 & 0.997$\pm$0.003 & 0.977$\pm$0.021 & 0.510$\pm$0.113 & 0.373 & 0.980$\pm$0.023 & 0.982$\pm$0.006 & 0.017 \\
+Lexical-LR & Sözde görülmemiş F1 & 0.996$\pm$0.004 & 0.994$\pm$0.002 & 0.752$\pm$0.061 & 0.613 & 0.996$\pm$0.004 & 0.973$\pm$0.003 & 0.054 \\
+Lexical-LR & İnsan \%5 FPR & 0.986$\pm$0.020 & 0.985$\pm$0.019 & 0.869$\pm$0.014 & 0.797 & 0.986$\pm$0.020 & 0.914$\pm$0.025 & 0.189 \\
+Lexical-LR & İnsan \%1 FPR & 0.991$\pm$0.013 & 0.991$\pm$0.013 & 0.849$\pm$0.025 & 0.754 & 0.991$\pm$0.013 & 0.936$\pm$0.029 & 0.137 \\
+RoBERTa & Sabit 0.5 & 0.991$\pm$0.002 & 0.989$\pm$0.002 & 0.845$\pm$0.061 & 0.770 & 0.988$\pm$0.005 & 0.953$\pm$0.011 & 0.099 \\
+RoBERTa & Doğrulama F1 & 0.992$\pm$0.002 & 0.989$\pm$0.002 & 0.771$\pm$0.108 & 0.675 & 0.984$\pm$0.014 & 0.964$\pm$0.010 & 0.071 \\
+RoBERTa & Sözde görülmemiş F1 & 0.988$\pm$0.005 & 0.987$\pm$0.002 & 0.801$\pm$0.134 & 0.722 & 0.980$\pm$0.013 & 0.965$\pm$0.009 & 0.070 \\
+RoBERTa & İnsan \%5 FPR & 0.975$\pm$0.006 & 0.975$\pm$0.006 & 0.939$\pm$0.027 & 0.929 & 0.975$\pm$0.007 & 0.908$\pm$0.006 & 0.203 \\
+RoBERTa & İnsan \%1 FPR & 0.989$\pm$0.008 & 0.987$\pm$0.007 & 0.860$\pm$0.106 & 0.788 & 0.984$\pm$0.007 & 0.953$\pm$0.018 & 0.099 \\
+Koordinatör & Sabit 0.5 & 0.996$\pm$0.001 & 0.993$\pm$0.005 & 0.732$\pm$0.089 & 0.605 & 0.993$\pm$0.010 & 0.990$\pm$0.002 & 0.015 \\
+Koordinatör & Doğrulama F1 & 0.996$\pm$0.001 & 0.992$\pm$0.005 & 0.719$\pm$0.051 & 0.586 & 0.992$\pm$0.009 & 0.991$\pm$0.000 & 0.014 \\
+Koordinatör & Sözde görülmemiş F1 & 0.994$\pm$0.002 & 0.992$\pm$0.003 & 0.807$\pm$0.140 & 0.713 & 0.990$\pm$0.007 & 0.981$\pm$0.009 & 0.038 \\
+Koordinatör & İnsan \%5 FPR & 0.981$\pm$0.011 & 0.981$\pm$0.010 & 0.949$\pm$0.013 & 0.938 & 0.981$\pm$0.011 & 0.929$\pm$0.006 & 0.154 \\
+Koordinatör & İnsan \%1 FPR & 0.993$\pm$0.004 & 0.993$\pm$0.004 & 0.910$\pm$0.021 & 0.851 & 0.993$\pm$0.004 & 0.956$\pm$0.017 & 0.092 \\
+\bottomrule
+\end{tabular}
+\end{table*}

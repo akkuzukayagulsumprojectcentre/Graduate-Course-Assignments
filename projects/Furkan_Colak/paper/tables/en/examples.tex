@@ -1,0 +1,18 @@
+\begin{table*}[t]
+\centering
+\footnotesize
+\caption{Examples of confident errors (CISA excerpts and LLM output), with the generator, the length and the mean score over the runs that misclassify the text.}
+\label{tab:examples}
+\begin{tabular}{p{4.2cm}p{12.8cm}}
+\toprule
+Error & Opening of the text \\
+\midrule
+FN, Coordinator: unsupported technical detail. Generator D, 341 words, mean P(LLM) 0.01 & Malicious cyber actors have been observed deploying the KONNI malware family in campaigns that rely on a classic spear-phishing attachment workflow (ATT\&CK T1566.001). The initial infection vector typically consists of a malicious Microsoft Office document that contains a Visual Basic for Applications (VBA) macro. When the recipient enables macros, the VBA code executes a chain of actions designed to establish\ldots \\
+FN, Coordinator: impersonal, human length. Generator D, 394 words, mean P(LLM) 0.17 & Network defenders should be aware that a growing cohort of opportunistic domain registrants is leveraging newly acquired Internet domains to stage man-in-the-middle (MitM) attacks against private and enterprise networks. These actors typically purchase or hijack domains with little or no apparent malicious intent and then configure the associated DNS records to redirect traffic through infrastructure they control. Because the domains\ldots \\
+FN, Lexical-LR: cites an agency. Generator D, 317 words, mean P(LLM) 0.34 & Malicious cyber actors-most likely advanced persistent threat (APT) groups-have been observed exploiting a series of critical VMware vulnerabilities disclosed in early 2022, specifically CVE-2022-22954, CVE-2022-22960, CVE-2022-22972, and CVE-2022-22973. These flaws enable a server-side template injection (SSTI) that can be leveraged to achieve remote code execution (RCE) on affected VMware products and, in many cases, to elevate privileges to the root\ldots \\
+FN, RoBERTa: first person, still missed. Generator D, 348 words, mean P(LLM) 0.04 & The recent discovery of a malicious 32-bit Windows executable that uses an RC6-encrypted payload has triggered a review of our defensive posture. The binary encrypts its core components with the RC6 block cipher, which hampers static analysis and delays visibility until decryption occurs at runtime. This approach is designed to evade signature-based detection, making behavioral monitoring and heuristic analysis essential\ldots \\
+FP, RoBERTa: first person. CISA, 156 words, mean P(LLM) 0.77 & Symantec and Norton branded antivirus products contain multiple vulnerabilities. Some of these products are in widespread use throughout government and industry. Exploitation of these vulnerabilities could allow a remote attacker to take control of an affected system. The large number of products affected (24 products), across multiple platforms (OSX, Windows, and Linux), and the severity of these vulnerabilities (remote code\ldots \\
+FP, RoBERTa: few proper nouns. CISA, 351 words, mean P(LLM) 0.90 & The threat actors in this campaign have been observed employing a variety of tactics, techniques, and procedures (TTPs). The actors use malware implants to acquire legitimate credentials then leverage those credentials to pivot throughout the local environment. NCCIC is aware of several compromises involving the exploitation of system administrators' credentials to access trusted domains as well as the malicious use\ldots \\
+\bottomrule
+\end{tabular}
+\end{table*}

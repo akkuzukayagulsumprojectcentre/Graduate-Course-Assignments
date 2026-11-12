@@ -1,0 +1,80 @@
+seeds: [42, 123, 2024]
+
+split:
+  train: 0.7
+  val: 0.1
+  test: 0.2
+  group_key: source_id
+
+clean:
+  enabled: true
+  length_matched_subset: true
+  mix_shares: [0.25, 0.5, 0.75]   # word share of LLM sentences in the partly generated test texts
+
+detectors:
+  lexical_lr:
+    word_ngrams: [1, 2]
+    char_ngrams: [3, 5]
+    max_features: 50000
+    C: 1.0
+  lexical_svm:
+    C: 1.0
+  stylometry_xgb:
+    n_estimators: 400
+    max_depth: 6
+    learning_rate: 0.05
+  transformer:
+    model: roberta-base
+    max_len: 256
+    epochs: 3
+    batch_size: 16
+    lr: 2.0e-5
+    fp16: true
+  llm_judge:
+    provider: ollama
+    model: gemma2:9b
+    concurrency: 3
+  coordinator:
+    members: [lexical_lr, lexical_svm, stylometry_xgb, transformer, llm_judge]
+
+# Training-free methods from the literature; their scores are mapped to probabilities on validation data only.
+# The Binoculars pair is the authors' default. Ghostbuster needs OpenAI models that were retired, so it is left out.
+zeroshot:
+  fast_detectgpt:
+    model: EleutherAI/gpt-neo-2.7B
+    max_len: 512
+    batch_size: 2
+    chunk: 1000      # texts scored between two saves of zeroshot.parquet
+  binoculars:
+    observer: tiiuae/falcon-7b
+    performer: tiiuae/falcon-7b-instruct
+    max_len: 512
+    batch_size: 2
+    chunk: 2000
+    top_k: 64        # the observer's distribution is kept sparse between the two passes
+    n_check: 16      # texts also scored with the full distribution, to measure the truncation error
+    load_4bit: true
+
+cost:
+  train_generator: A
+  n_texts: 200
+  n_judge: 50
+  repeats: 3
+
+# Experiments are derived from one training per generator subset (A, B, C, AB, AC, BC, ABC) x seed:
+#   E1 in-generator      train {X}   -> test X;  pooled ABC -> test each
+#   E2 cross-generator   train {X}   -> test Y != X
+#   E3 leave-one-out     train {X,Y} -> test Z
+# Ablations (per single-generator training set): feature groups, cleaning off,
+# multi-agent -> single-agent texts, unseen writer template, coordinator member drop (in evaluate).
+
+
+# A-C (local models) are used for training; D-E (API models) only appear as unseen test generators.
+train_generators: [A, B, C]
+
+# Leakage checks. Containment: share of a text's word n-grams found in one other text.
+leakage:
+  shingle: 5
+  dup: 0.5         # near-duplicate
+  strict: 0.2      # stricter cut for the sensitivity check
+  detectors: [lexical_lr, stylometry_xgb]   # retrained under the control splits (CPU only)

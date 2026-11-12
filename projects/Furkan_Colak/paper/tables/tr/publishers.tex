@@ -1,0 +1,27 @@
+\begin{table*}[t]
+\centering
+\footnotesize
+\caption{CISA + ABC ile eğitilen modeller, eşik 0.5. FPR yayıncının bütün insan parçaları üzerinde; duyarlılık, F1 ve AUC insan parçaları ile bunların A, B ve C sürümleri üzerinde, ortalama. FPR ve F1 üç seed üzerinden ortalama $\pm$ std; aralık kaynakları yeniden örnekler. Son sütunda diğer dış yayıncı eğitime eklenmiştir.}
+\label{tab:publishers}
+\begin{tabular}{llccrcrc}
+\toprule
+Yayıncı & Dedektör & FPR & \%95 GA & Duyarlılık & F1 & ROC-AUC & FPR, diğer yayıncı eğitimde \\
+\midrule
+CISA & Lexical-LR & 0.014$\pm$0.023 & -- & 0.999 & 0.993$\pm$0.011 & 1.000 & -- \\
+CISA & RoBERTa & 0.055$\pm$0.032 & -- & 1.000 & 0.973$\pm$0.015 & 1.000 & -- \\
+CISA & Koordinatör & 0.005$\pm$0.008 & -- & 1.000 & 0.998$\pm$0.004 & 1.000 & -- \\
+CISA & Fast-DetectGPT & 0.260$\pm$0.063 & -- & 0.743 & 0.740$\pm$0.023 & 0.828 & -- \\
+CISA & Binoculars & 0.106$\pm$0.019 & -- & 0.760 & 0.812$\pm$0.030 & 0.900 & -- \\
+Microsoft & Lexical-LR & 0.154$\pm$0.015 & [0.128, 0.179] & 1.000 & 0.929$\pm$0.007 & 1.000 & 0.016$\pm$0.005 \\
+Microsoft & RoBERTa & 0.205$\pm$0.115 & [0.177, 0.234] & 1.000 & 0.909$\pm$0.046 & 1.000 & 0.049$\pm$0.037 \\
+Microsoft & Koordinatör & 0.045$\pm$0.020 & [0.030, 0.061] & 1.000 & 0.978$\pm$0.010 & 1.000 & 0.003$\pm$0.005 \\
+Microsoft & Fast-DetectGPT & 0.124$\pm$0.017 & [0.099, 0.150] & 0.895 & 0.886$\pm$0.003 & 0.954 & -- \\
+Microsoft & Binoculars & 0.033$\pm$0.007 & [0.019, 0.049] & 0.892 & 0.926$\pm$0.007 & 0.979 & -- \\
+Mandiant & Lexical-LR & 0.143$\pm$0.006 & [0.117, 0.172] & 1.000 & 0.933$\pm$0.002 & 1.000 & 0.013$\pm$0.006 \\
+Mandiant & RoBERTa & 0.225$\pm$0.138 & [0.189, 0.262] & 1.000 & 0.901$\pm$0.054 & 1.000 & 0.045$\pm$0.015 \\
+Mandiant & Koordinatör & 0.063$\pm$0.034 & [0.044, 0.081] & 1.000 & 0.970$\pm$0.016 & 1.000 & 0.018$\pm$0.003 \\
+Mandiant & Fast-DetectGPT & 0.126$\pm$0.013 & [0.095, 0.159] & 0.846 & 0.857$\pm$0.005 & 0.940 & -- \\
+Mandiant & Binoculars & 0.016$\pm$0.006 & [0.003, 0.031] & 0.836 & 0.901$\pm$0.013 & 0.977 & -- \\
+\bottomrule
+\end{tabular}
+\end{table*}

@@ -1,0 +1,24 @@
+\begin{table*}[t]
+\centering
+\footnotesize
+\caption{Yeniden yazım, prompt stratejisi ve kısmi üretim altında LLM metinlerinde eşik 0.5'te duyarlılık, CISA + ABC ile eğitim (üç seed üzerinden ortalama $\pm$ std). *, aynı parçaların değişiklikten önceki hâline göre duyarlılık değişiminin Holm düzeltmeli p $<$ 0.05 olduğunu gösterir (dedektör başına).}
+\label{tab:robustness}
+\begin{tabular}{lccccc}
+\toprule
+Koşul & Lexical-LR & RoBERTa & Koordinatör & Fast-DetectGPT & Binoculars \\
+\midrule
+Yalnız Yazar, Editör yok & 0.999$\pm$0.002 & 1.000$\pm$0.000 & 1.000$\pm$0.000 & 0.847$\pm$0.018* & 0.863$\pm$0.041* \\
+Yeniden ifade, aynı model & 0.999$\pm$0.002 & 1.000$\pm$0.000 & 1.000$\pm$0.000 & 0.612$\pm$0.036* & 0.560$\pm$0.055* \\
+Yeniden ifade, başka model & 1.000$\pm$0.000 & 1.000$\pm$0.000 & 1.000$\pm$0.000 & 0.623$\pm$0.045* & 0.594$\pm$0.036* \\
+İki kez yeniden ifade & 1.000$\pm$0.000 & 1.000$\pm$0.000 & 1.000$\pm$0.000 & 0.616$\pm$0.033* & 0.586$\pm$0.066* \\
+Geri çeviri & 0.999$\pm$0.002 & 0.989$\pm$0.003* & 0.994$\pm$0.003 & 0.619$\pm$0.026* & 0.516$\pm$0.038* \\
+``İnsanlaştır'' promptu & 0.999$\pm$0.002 & 0.999$\pm$0.002 & 0.999$\pm$0.002 & 0.676$\pm$0.040* & 0.681$\pm$0.038* \\
+Bildiri üslubu promptu & 0.997$\pm$0.005 & 1.000$\pm$0.000 & 1.000$\pm$0.000 & 0.661$\pm$0.054* & 0.640$\pm$0.068* \\
+Az örnekli prompt (insan parçaları) & 0.982$\pm$0.005* & 0.972$\pm$0.007* & 0.952$\pm$0.003* & 0.784$\pm$0.051* & 0.791$\pm$0.010 \\
+Kaynağı okuyan tek ajan & 0.667$\pm$0.116* & 0.733$\pm$0.087* & 0.565$\pm$0.149* & 0.759$\pm$0.028 & 0.676$\pm$0.082* \\
+\%25 LLM cümlesi & 0.316$\pm$0.055* & 0.429$\pm$0.082* & 0.161$\pm$0.029* & 0.469$\pm$0.046* & 0.274$\pm$0.048* \\
+\%50 LLM cümlesi & 0.850$\pm$0.006* & 0.663$\pm$0.080* & 0.552$\pm$0.067* & 0.634$\pm$0.039* & 0.502$\pm$0.046* \\
+\%75 LLM cümlesi & 0.977$\pm$0.002* & 0.875$\pm$0.022* & 0.857$\pm$0.010* & 0.706$\pm$0.025* & 0.669$\pm$0.059* \\
+\bottomrule
+\end{tabular}
+\end{table*}

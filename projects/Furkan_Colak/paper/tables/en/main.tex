@@ -1,0 +1,21 @@
+\begin{table*}[t]
+\centering
+\footnotesize
+\caption{Models trained on one generator (A, B or C). F1 is mean $\pm$ std over three seeds of the average over training generators; AUC is ROC-AUC.}
+\label{tab:main}
+\begin{tabular}{lcccccccc}
+\toprule
+Detector & \multicolumn{2}{c}{In-generator} & \multicolumn{2}{c}{Cross (A--C)} & \multicolumn{2}{c}{D: gpt-oss-120b} & \multicolumn{2}{c}{E: Gemini} \\
+ & F1 & AUC & F1 & AUC & F1 & AUC & F1 & AUC \\
+\midrule
+Lexical-LR & 0.997 $\pm$ 0.004 & 1.000 & 0.966 $\pm$ 0.009 & 1.000 & 0.336 $\pm$ 0.032 & 0.976 & 0.960 $\pm$ 0.013 & 1.000 \\
+Lexical-SVM & 0.998 $\pm$ 0.004 & 1.000 & 0.975 $\pm$ 0.004 & 1.000 & 0.351 $\pm$ 0.036 & 0.982 & 0.969 $\pm$ 0.012 & 1.000 \\
+Stylometry & 0.935 $\pm$ 0.009 & 0.983 & 0.869 $\pm$ 0.010 & 0.956 & 0.704 $\pm$ 0.010 & 0.875 & 0.784 $\pm$ 0.015 & 0.926 \\
+RoBERTa & 0.991 $\pm$ 0.002 & 0.999 & 0.989 $\pm$ 0.002 & 0.999 & 0.845 $\pm$ 0.061 & 0.984 & 0.988 $\pm$ 0.005 & 0.999 \\
+LLM Judge & 0.504 $\pm$ 0.024 & 0.409 & 0.504 $\pm$ 0.024 & 0.409 & 0.499 $\pm$ 0.026 & 0.533 & 0.628 $\pm$ 0.015 & 0.754 \\
+Fast-DetectGPT & 0.748 $\pm$ 0.004 & 0.828 & 0.729 $\pm$ 0.015 & 0.828 & 0.566 $\pm$ 0.027 & 0.699 & 0.457 $\pm$ 0.019 & 0.613 \\
+Binoculars & 0.815 $\pm$ 0.023 & 0.900 & 0.804 $\pm$ 0.016 & 0.900 & 0.390 $\pm$ 0.048 & 0.734 & 0.330 $\pm$ 0.087 & 0.671 \\
+Coordinator & 0.996 $\pm$ 0.001 & 1.000 & 0.993 $\pm$ 0.005 & 1.000 & 0.732 $\pm$ 0.089 & 0.988 & 0.993 $\pm$ 0.010 & 1.000 \\
+\bottomrule
+\end{tabular}
+\end{table*}

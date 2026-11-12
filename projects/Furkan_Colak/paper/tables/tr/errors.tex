@@ -1,0 +1,29 @@
+\begin{table*}[t]
+\centering
+\footnotesize
+\caption{Bütün seed'ler üzerinden hata kategorileri: her dedektörün hatalarının sayısı ve payı. Kategoriler birbirini dışlar ve uyan ilk kurala göre atanır (Bölüm~\ref{sec:errors}); bir metin yanlış sınıflandırıldığı her çalıştırmada bir kez sayılır. ``Bütün metinler'', kategorinin gruptaki hatalı ya da hatasız bütün metinler içindeki payıdır; bir kategori ancak hatalar içindeki payı bunu aştığında hatalarda fazla temsil edilir. FN ve CISA satırları: tek üreticiyle eğitilen modeller; firma satırları: ABC ile eğitilen modeller.}
+\label{tab:errors}
+\begin{tabular}{llcccc}
+\toprule
+Hata & Kategori & Bütün metinler & Lexical-LR & RoBERTa & Koordinatör \\
+\midrule
+FN, D & kişisiz, insan uzunluğunda & 76\% & 425 (76\%) & 112 (69\%) & 198 (71\%) \\
+FN, D & kurum adı geçiyor & 11\% & 60 (11\%) & 17 (10\%) & 30 (11\%) \\
+FN, D & birinci şahıs, yine de kaçırıldı & 10\% & 44 (8\%) & 16 (10\%) & 22 (8\%) \\
+FN, D & olgularda olmayan teknik ayrıntı & 4\% & 30 (5\%) & 17 (10\%) & 28 (10\%) \\
+FN, diğer üreticiler & birinci şahıs, yine de kaçırıldı & 46\% & 47 (32\%) & 3 (17\%) & 10 (37\%) \\
+FN, diğer üreticiler & kişisiz, kısa & 30\% & 43 (29\%) & 1 (6\%) & 2 (7\%) \\
+FN, diğer üreticiler & kurum adı geçiyor & 7\% & 26 (18\%) & 9 (50\%) & 8 (30\%) \\
+FN, diğer üreticiler & kişisiz, insan uzunluğunda & 17\% & 30 (20\%) & 5 (28\%) & 7 (26\%) \\
+FN, diğer üreticiler & olgularda olmayan teknik ayrıntı & 0\% & 1 (1\%) & 0 & 0 \\
+FP, CISA & birinci şahıs & 15\% & 0 & 4 (36\%) & 2 (100\%) \\
+FP, CISA & az özel ad & 19\% & 0 & 3 (27\%) & 0 \\
+FP, CISA & diğer & 28\% & 0 & 2 (18\%) & 0 \\
+FP, CISA & ürün açığı bildirimi & 9\% & 0 & 2 (18\%) & 0 \\
+FP, firma blogları & birinci şahıs & 75\% & 174 (89\%) & 255 (90\%) & 58 (83\%) \\
+FP, firma blogları & az özel ad & 16\% & 22 (11\%) & 23 (8\%) & 12 (17\%) \\
+FP, firma blogları & diğer & 7\% & 0 & 2 (1\%) & 0 \\
+FP, firma blogları & ürün açığı bildirimi & 2\% & 0 & 2 (1\%) & 0 \\
+\bottomrule
+\end{tabular}
+\end{table*}

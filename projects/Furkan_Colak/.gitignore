@@ -1,0 +1,41 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# assignment brief
+YL_ODEV.pdf
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# data that cannot be redistributed or is too large
+data/raw/aptnotes/
+data/cache/
+# copyrighted excerpts of other publishers (facts.jsonl keeps the input text); rebuilt by `collect_ext`
+data/external/human_chunks.jsonl
+data/external/facts.jsonl
+data/processed/extra.parquet
+models/
+*.pt
+*.safetensors
+
+# latex build
+paper/**/*.aux
+paper/**/*.log
+paper/**/*.out
+paper/**/*.bbl
+paper/**/*.blg
+paper/**/*.synctex.gz
+
+# os
+.DS_Store
+Thumbs.db
+desktop.ini
+
+

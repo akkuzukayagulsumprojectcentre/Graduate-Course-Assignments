@@ -1,0 +1,26 @@
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  box/.style={draw, rounded corners=2pt, align=center, font=\scriptsize, minimum height=6mm, inner sep=2pt},
+  arr/.style={-{Latex[length=1.6mm]}, thin}]
+\node[box] (h) {Human excerpt\\(released $\le$ 30.11.2022)};
+\node[box, right=4mm of h] (an) {Analyst\\Llama 3.1 8B};
+\node[box, right=4mm of an] (f) {Facts\\(JSON)};
+\node[box, above right=0mm and 4mm of f] (w) {Writer $\rightarrow$ Editor\\generator A--E};
+\node[box, below right=0mm and 4mm of f] (s) {Rewrites,\\single agent};
+\draw[arr] (h) -- (an);
+\draw[arr] (an) -- (f);
+\draw[arr] (f.east) -- (w.west);
+\draw[arr] (w.south) -- (s.north);
+\node[box, below=12mm of an, xshift=8mm, text width=0.92\columnwidth]
+  (d) {Lexical-LR \quad Lexical-SVM \quad Stylometry \quad RoBERTa \quad LLM Judge};
+\node[box, below=3mm of d] (c) {Coordinator (stacking on validation split) $\rightarrow$ P(LLM)};
+\draw[arr] (d) -- (c);
+\draw[arr, dashed] (w.south) |- ([yshift=3mm]d.north) -- (d.north);
+\end{tikzpicture}
+\caption{Generation agents (top) and detection agents (bottom). All generators write from the same Analyst facts and
+never see the human excerpt. Rewritten versions start from the Writer--Editor output; the single-agent condition
+reads the human excerpt directly. Human excerpts come from CISA (training and testing) and from Microsoft and
+Mandiant (testing only).}
+\label{fig:pipeline}
+\end{figure}

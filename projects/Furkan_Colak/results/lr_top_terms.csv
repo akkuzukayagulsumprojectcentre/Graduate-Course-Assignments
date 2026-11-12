@@ -1,0 +1,61 @@
+term,coef,side
+word:our,0.7977334510652887,llm
+word:potential,0.7124506963087249,llm
+word:to mitigate,0.6445106248587638,llm
+word:been,0.627339752190457,llm
+word:we,0.6168859860687106,llm
+word:mitigate,0.5997350098825402,llm
+word:impact,0.5532900309741077,llm
+word:prevent,0.5264971970369159,llm
+word:unauthorized access,0.49551947897012444,llm
+word:measures,0.49387789098955787,llm
+word:significant,0.4871471903439492,llm
+word:has been,0.48638982004278336,llm
+word:to prevent,0.48448559798787844,llm
+word:team,0.48288305713199825,llm
+word:defenders should,0.46786041903629033,llm
+word:unauthorized,0.4623021443478791,llm
+word:have been,0.43744626398479447,llm
+word:impact of,0.43694996505379213,llm
+word:mitigate this,0.43675202100935107,llm
+word:the impact,0.4285392325471152,llm
+char: our ,0.4264273605760305,llm
+char: our,0.4264273605760305,llm
+word:defenders,0.4262220355660914,llm
+word:essential,0.4183645223487261,llm
+word:advised to,0.4088514877211979,llm
+char:pote,0.40220466378110836,llm
+char: pote,0.40220466378110836,llm
+char:otent,0.40220466378110836,llm
+char:oten,0.40220466378110836,llm
+char:poten,0.40220466378110836,llm
+word:cisa,-0.9558773718777155,human
+word:fbi,-0.6989633990997682,human
+word:see,-0.6150164576825538,human
+word:an,-0.5619866975392214,human
+word:note,-0.5457007187538847,human
+char:cisa,-0.4858469948779174,human
+char: cisa,-0.47316103167727014,human
+char:isa,-0.4714974583767958,human
+char: ci,-0.47063887909305907,human
+char: cis,-0.46914352460018377,human
+char:sa ,-0.4645297230681772,human
+word:cisa and,-0.4639866409400475,human
+char:cis,-0.44949862268033297,human
+char:cisa ,-0.4418472880658563,human
+char:isa ,-0.4418472880658563,human
+word:the fbi,-0.43535326320138806,human
+word:cybersecurity,-0.3633924615934141,human
+word:alert,-0.36219529345712587,human
+char:fbi,-0.3604918364838914,human
+word:att,-0.3549988985247723,human
+word:victim,-0.3534585001056373,human
+word:information on,-0.35267894221133084,human
+word:ck,-0.3515805965146211,human
+word:att ck,-0.3515805965146211,human
+word:for more,-0.3440101666451185,human
+word:other,-0.3423238175437784,human
+word:for,-0.3393954459939087,human
+word:new,-0.3377680272314296,human
+word:information,-0.3348652915173777,human
+word:joint,-0.3348651846762336,human

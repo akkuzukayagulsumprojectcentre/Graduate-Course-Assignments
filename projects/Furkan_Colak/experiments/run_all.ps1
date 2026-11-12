@@ -5,7 +5,7 @@ $ErrorActionPreference = "Stop"
 Set-Location (Split-Path $PSScriptRoot -Parent)
 $env:PYTHONIOENCODING = "utf-8"
 
-$stages = "collect", "collect_ext", "generate", "variants", "build", "analyze", "zeroshot", "detect", "evaluate", "calibrate", "compare", "robust", "errors", "cost", "report"
+$stages = "collect", "collect_ext", "generate", "variants", "build", "analyze", "zeroshot", "detect", "evaluate", "calibrate", "compare", "robust", "errors", "leakage", "cost", "report", "verify"
 $started = $false
 foreach ($st in $stages) {
     if ($st -eq $From) { $started = $true }

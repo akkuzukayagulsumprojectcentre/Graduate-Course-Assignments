@@ -1,0 +1,32 @@
+\begin{table*}[t]
+\centering
+\scriptsize
+\caption{Main results on all test excerpts and without those whose human or LLM text has a near-duplicate in the training or validation split of the same seed (containment of word 5-grams $\geq$ 0.5; strict: $\geq$ 0.2). Mean test-set size: 158 / 139 / 121 texts. F1 is mean $\pm$ std over three seeds.}
+\label{tab:leakage}
+\begin{tabular}{llcccccc}
+\toprule
+Setting & Detector & \multicolumn{3}{c}{F1} & \multicolumn{3}{c}{ROC-AUC} \\
+\cmidrule(lr){3-5}\cmidrule(lr){6-8}
+ & & All & No dup. & Strict & All & No dup. & Strict \\
+\midrule
+In-generator & Lexical-LR & 0.997$\pm$0.004 & 0.996$\pm$0.005 & 0.998$\pm$0.002 & 1.000 & 1.000 & 1.000 \\
+In-generator & RoBERTa & 0.992$\pm$0.003 & 0.991$\pm$0.004 & 0.991$\pm$0.003 & 1.000 & 1.000 & 1.000 \\
+In-generator & Coordinator & 0.998$\pm$0.000 & 0.998$\pm$0.000 & 0.998$\pm$0.002 & 1.000 & 1.000 & 1.000 \\
+Cross (A--C) & Lexical-LR & 0.966$\pm$0.008 & 0.967$\pm$0.010 & 0.972$\pm$0.011 & 1.000 & 1.000 & 1.000 \\
+Cross (A--C) & RoBERTa & 0.990$\pm$0.002 & 0.989$\pm$0.002 & 0.988$\pm$0.001 & 1.000 & 1.000 & 1.000 \\
+Cross (A--C) & Coordinator & 0.993$\pm$0.003 & 0.993$\pm$0.003 & 0.994$\pm$0.004 & 1.000 & 1.000 & 1.000 \\
+D, one generator & Lexical-LR & 0.329$\pm$0.017 & 0.330$\pm$0.032 & 0.315$\pm$0.052 & 0.979 & 0.976 & 0.975 \\
+D, one generator & RoBERTa & 0.859$\pm$0.022 & 0.859$\pm$0.028 & 0.851$\pm$0.020 & 0.982 & 0.980 & 0.978 \\
+D, one generator & Coordinator & 0.721$\pm$0.083 & 0.717$\pm$0.099 & 0.705$\pm$0.093 & 0.987 & 0.985 & 0.985 \\
+E, one generator & Lexical-LR & 0.961$\pm$0.012 & 0.959$\pm$0.017 & 0.963$\pm$0.019 & 1.000 & 1.000 & 1.000 \\
+E, one generator & RoBERTa & 0.991$\pm$0.003 & 0.990$\pm$0.003 & 0.988$\pm$0.004 & 1.000 & 1.000 & 1.000 \\
+E, one generator & Coordinator & 0.995$\pm$0.003 & 0.995$\pm$0.002 & 0.994$\pm$0.003 & 1.000 & 1.000 & 1.000 \\
+D, ABC & Lexical-LR & 0.883$\pm$0.021 & 0.871$\pm$0.031 & 0.875$\pm$0.022 & 0.987 & 0.984 & 0.984 \\
+D, ABC & RoBERTa & 0.958$\pm$0.012 & 0.954$\pm$0.012 & 0.951$\pm$0.013 & 0.990 & 0.989 & 0.988 \\
+D, ABC & Coordinator & 0.915$\pm$0.030 & 0.916$\pm$0.038 & 0.910$\pm$0.037 & 0.995 & 0.994 & 0.994 \\
+E, ABC & Lexical-LR & 0.993$\pm$0.011 & 0.992$\pm$0.013 & 0.992$\pm$0.014 & 1.000 & 1.000 & 1.000 \\
+E, ABC & RoBERTa & 0.979$\pm$0.003 & 0.977$\pm$0.003 & 0.973$\pm$0.005 & 1.000 & 1.000 & 1.000 \\
+E, ABC & Coordinator & 0.996$\pm$0.004 & 0.995$\pm$0.004 & 0.995$\pm$0.005 & 1.000 & 1.000 & 1.000 \\
+\bottomrule
+\end{tabular}
+\end{table*}

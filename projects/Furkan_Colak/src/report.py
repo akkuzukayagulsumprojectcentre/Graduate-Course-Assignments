@@ -285,7 +285,7 @@ def run(cfg: dict) -> None:
     out.append(macro("TopFeature", imp.feature.iloc[0].replace("_", "\\_")))
 
     # Imported here because these modules reuse the helpers above.
-    from src import report_err, report_ext
+    from src import report_audit, report_err, report_ext
     report_ext.data_table(out)
     report_ext.publisher_table(out)
     report_ext.calibration_tables(out)
@@ -296,6 +296,8 @@ def run(cfg: dict) -> None:
     report_err.category_table(out)
     report_err.contrast_table(out)
     report_err.example_table(out)
+    report_audit.leakage_tables(out)
+    report_audit.newgen_table(out)
 
     (PAPER / "numbers.tex").write_text("% Written by `python -m src.cli report`. Do not edit by hand.\n"
                                        + "\n".join(out) + "\n", encoding="utf-8")

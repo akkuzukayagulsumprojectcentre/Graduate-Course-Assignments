@@ -18,8 +18,10 @@ STAGES = {
     "compare": "src.compare",
     "robust": "src.robust",
     "errors": "src.errors",
+    "leakage": "src.leakage",
     "cost": "src.cost",
     "report": "src.report",
+    "verify": "src.verify",
 }
 
 

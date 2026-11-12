@@ -1,0 +1,22 @@
+{
+ "shingle": 5,
+ "dup": 0.5,
+ "strict": 0.2,
+ "split_overlap": 0,
+ "audit_files": 105,
+ "audit_rows": 196850,
+ "audit_bad": 0,
+ "dup_groups": 16,
+ "dup_sources": 38,
+ "n_sources": 203,
+ "sibling_median": 0.006269592476489028,
+ "sibling_dup": 3,
+ "n_siblings": 325,
+ "vendor_max": 0.027190332326283987,
+ "vendor_dup": 0,
+ "n_vendor": 438,
+ "val_min": 20,
+ "val_max": 20,
+ "val_human_min": 38,
+ "val_human_max": 42
+}

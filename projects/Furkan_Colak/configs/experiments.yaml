@@ -71,3 +71,10 @@ cost:
 
 # A-C (local models) are used for training; D-E (API models) only appear as unseen test generators.
 train_generators: [A, B, C]
+
+# Leakage checks. Containment: share of a text's word n-grams found in one other text.
+leakage:
+  shingle: 5
+  dup: 0.5         # near-duplicate
+  strict: 0.2      # stricter cut for the sensitivity check
+  detectors: [lexical_lr, stylometry_xgb]   # retrained under the control splits (CPU only)

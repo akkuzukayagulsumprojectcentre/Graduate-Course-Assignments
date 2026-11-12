@@ -41,7 +41,8 @@ facts, and twelve rewriting, prompt and partial-generation conditions are derive
 split across agents as well: TF-IDF models, a stylometric model, fine-tuned RoBERTa and an LLM judge feed a stacked
 Coordinator, with Fast-DetectGPT and Binoculars as training-free references. In-generator F1 reaches
 \FoneInCoord{}. On an unseen 120B model a TF-IDF detector falls to F1 \FoneDLexLR{} although its ROC-AUC stays at
-\AucDLexLR{}. Training on three generators instead of one raises that F1 to \PoolDLexLR{}, and it also raises the
+\AucDLexLR{}: it misses \NgDLexlrFnr{} of the generated texts and flags no human one, so the scores keep their
+order and only the threshold fails. Training on three generators instead of one raises that F1 to \PoolDLexLR{}, and it also raises the
 detector's false positive rate on Microsoft excerpts from \PoolfprOneMicrosoftLexlr{} to \PoolfprThreeMicrosoftLexlr{}. A
 threshold set from human scores alone shows the same trade. The error analysis explains it: the missed texts are
 long, impersonal and low in lexical diversity, as CISA excerpts are, and the flagged vendor excerpts are shorter,
@@ -49,7 +50,10 @@ written in the first person and lexically diverse, as the training generators ar
 worsens the probabilities under generator shift. Paraphrasing by an LLM lowers the recall of the training-free
 detectors and leaves the trained ones unchanged, while rewriting from the source and sentence-level mixing lower
 both. The Coordinator is better than RoBERTa in \GapWins{} of \GapN{} scenarios and worse in \GapLosses{}, those in
-which the member it weights most fails.
+which the member it weights most fails. A leakage audit of the saved predictions finds no test report in training,
+but CISA reposts of the same advisory give \LeakDupShareMin{}--\LeakDupShareMax{} of the test excerpts a
+near-duplicate in training. Removing them changes no F1 of a trained detector by more than
+\LeakMaxDeltaCleanFOne{}.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -103,7 +107,8 @@ contributions.
 \item We build a content-controlled CTI corpus in which five generators from five model families write from the
 same extracted facts. Human text from three publishers, all released on or before 30 November 2022, separates
 generator shift from publisher shift, and twelve rewriting, prompt-strategy and partial-generation conditions are
-applied to the test excerpts. All splits are made at the level of the source report.
+applied to the test excerpts. All splits are made at the level of the source report, and the split is checked on
+the saved predictions, for near-duplicate reports and with control trainings.
 \item We measure ranking and decision separately under shift. Three calibrators and five threshold rules are
 fitted on validation data only, two of them without any assumption about the test generator. The result is that
 both remedies for an unseen generator, pooled training data and a threshold from human scores, raise false alarms
@@ -271,6 +276,7 @@ Splits are made by source report: 70\% of CISA sources for training, 10\% for va
 separately for each seed (42, 123, 2024). A human excerpt and all of its LLM versions, rewritten or not, always fall
 in the same split. Vectorizers, scalers, detectors, the Coordinator, calibrators and thresholds are fitted on
 training or validation data only. Test, D, E, rewritten and external texts are only scored.
+Section~\ref{sec:leaksetup} describes how this separation was checked.
 
 \section{Detection Agents}\label{sec:agents}
 \subsection{Members}
@@ -365,6 +371,23 @@ Holm's method is applied within each of these families. Where tests are reported
 Benjamini-Hochberg procedure \cite{Benjamini_1995} is used. Detectors are also compared on single test sets with
 exact McNemar tests, Holm-corrected per detector pair. Linguistic differences are tested with Mann-Whitney U and
 Cliff's $\delta$ as the effect size, and distinctive n-grams are ranked with weighted log-odds \cite{Monroe_2008}.
+For the unseen generators we also report the false positive rate (human texts flagged) and the false negative rate
+(LLM texts missed) separately, next to ROC-AUC and the calibration measures, because F1 mixes two errors whose cost
+differs in CTI.
+
+\subsection{Leakage checks}\label{sec:leaksetup}
+A split by source id prevents leakage only if each report has exactly one id, so we check the separation in four
+ways, all on the saved predictions of the runs reported here. First, every prediction file is audited: each scored
+test row must come from a source in the test split of its seed. Second, every test text, human or generated, is
+compared with every training and validation text of the same seed by word 5-gram containment, the share of its
+5-grams that occur in a single other text. A containment of at least \LeakDup{} marks a near-duplicate, and
+\LeakStrict{} serves as a stricter cut that also flags excerpts sharing long passages. Third, all main results are
+recomputed without the test excerpts whose human text or any LLM version has a near-duplicate. The excerpt and all
+its LLM texts are removed together, so the test sets stay paired. Fourth, Lexical-LR and Stylometry are retrained
+under three control splits: one that joins near-duplicate reports into a group before splitting, one that splits by
+excerpt so that excerpts of one report fall on both sides (the leakage the source split is meant to prevent), and the
+source split with shuffled training labels, which should give chance-level results if no label information reaches
+the models through features or preprocessing.
 
 \subsection{Calibration and thresholds}
 For each detector and training run we fit three calibrators on the validation split: Platt scaling (logistic
@@ -408,6 +431,45 @@ author defined the rules, and they were not validated by a second annotator.
 
 \section{Results}\label{sec:results}
 \input{../tables/en/data.tex}
+\input{../tables/en/leakage.tex}
+\input{../tables/en/controls.tex}
+\subsection{Leakage checks}\label{sec:leakage}
+The split audit finds no violation. Of the \LeakAuditRows{} scored test rows in \LeakAuditFiles{} prediction files,
+\LeakAuditBad{} come from a training or validation source of their seed, and no source id occurs in two splits of
+any seed. The near-duplicate check does find leakage of another kind. CISA publishes some advisories more
+than once, under an advisory code such as AA22-110A and under a descriptive address, or as an updated copy, and the
+collector stored each copy as a source of its own. With reports that reuse whole paragraphs, such as the Hidden
+Cobra malware reports, \LeakDupSources{} of the \LeakNSources{} sources form \LeakDupGroups{} groups of
+near-duplicate reports. Depending on the seed, \LeakChunksDupMin{} to \LeakChunksDupMax{} of the
+\LeakTestChunksMin{} to \LeakTestChunksMax{} test excerpts (\LeakDupShareMin{} to \LeakDupShareMax{}) have a human
+near-duplicate in training or validation, and \LeakChunksStrictMin{} to \LeakChunksStrictMax{} under the strict cut.
+No LLM text has one. Even when two reports carry the same facts, the Writers do not
+reproduce the wording of another text. Excerpts of the same report, which a split by excerpt would separate,
+overlap little (median containment \LeakSiblingMedian{}; \LeakSiblingDup{} of \LeakNSiblings{} are
+near-duplicates), and no Microsoft or Mandiant excerpt is a near-duplicate of a CISA excerpt (largest containment
+\LeakVendorMax{}).
+
+These duplicates do not carry the results (Table~\ref{tab:leakage}). Without them, the F1 of the trained detectors
+changes by at most \LeakMaxDeltaCleanFOne{} in any setting and their ROC-AUC by at most \LeakMaxDeltaCleanAuc{}. Under
+the strict cut the largest changes are \LeakMaxDeltaStrictFOne{} and \LeakMaxDeltaStrictAuc{}. On D, where a
+memorized duplicate could matter most, Lexical-LR has F1 \LeakDLexlrAll{} on all test excerpts and
+\LeakDLexlrClean{} without duplicates, RoBERTa \LeakDTransAll{} and \LeakDTransClean{}. Of the \LeakNCompCleanFOne{}
+combinations of trained detector and setting, F1 falls in \LeakNDownCleanFOne{}, rises in \LeakNUpCleanFOne{} and
+is unchanged to three decimals in the rest, and ROC-AUC never rises. The training-free detectors, which never see a training
+text, change by up to \LeakMaxDeltaZeroFone{} in the same direction. The duplicated excerpts are thus slightly easier to classify, and a
+change of this size is what removing a tenth of the test excerpts does by itself.
+
+The control trainings agree (Table~\ref{tab:controls}). With near-duplicate reports joined before splitting,
+Lexical-LR reaches F1 \CtrlGroupInLexlr{} in-generator, \CtrlGroupCrossLexlr{} across local generators and
+\CtrlGroupDLexlr{} on D, against \CtrlSourceInLexlr{}, \CtrlSourceCrossLexlr{} and \CtrlSourceDLexlr{} with the split
+used in this paper. The split by excerpt, which lets the other excerpts of a test report into training, does not
+raise the scores either (\CtrlChunkInLexlr{}, \CtrlChunkCrossLexlr{} and \CtrlChunkDLexlr{}). This follows from the
+design: a human excerpt and its LLM versions carry the same facts and always share a split, so knowing the content
+of a report does not tell the two classes apart. With shuffled training labels both detectors fall to chance
+(ROC-AUC between \CtrlShuffledAucMin{} and \CtrlShuffledAucMax{}), so no label information reaches them through
+the features or the preprocessing. All other results use the original splits, and the duplicate pairs are listed
+in the repository.
+
 \subsection{Linguistic differences}
 Table~\ref{tab:data} and Fig.~\ref{fig:boxes} summarize the corpus. Of the \NTests{} generator-feature comparisons,
 \NLargeEffects{} show a large effect ($|\delta| \geq 0.474$) after Benjamini-Hochberg correction. Lexical diversity
@@ -620,6 +682,44 @@ most, which is the trade already seen for pooled training.
 \label{fig:sweep}
 \end{figure}
 
+\input{../tables/en/newgen.tex}
+\subsection{Error rates and probability quality on the new generators}\label{sec:newgen}
+Table~\ref{tab:newgen} gives the false positive rate, the false negative rate, ROC-AUC and the calibration measures
+for D and E side by side. Read together, they separate three cases.
+
+\emph{D after training on one generator: the order holds, the threshold fails.} The trained detectors err in one
+direction only. Their false positive rate on the CISA excerpts of the D test sets is the in-generator one
+(Lexical-LR \NgDLexlrFpr{}, RoBERTa \NgDTransFpr{}, Coordinator \NgDCoordFpr{}), since these are the same human
+texts, while the false negative rate rises from at most \NgInLexlrFnr{} in-generator to \NgDLexlrFnr{},
+\NgDTransFnr{} and \NgDCoordFnr{}. ROC-AUC stays between \NgDLexlrRocAuc{} and \NgDCoordRocAuc{}. The D texts are
+still scored above the human excerpts, but many of them below 0.5. The probabilities record this shift. The ECE of
+RoBERTa grows from \NgInTransEce{} to \NgDTransEce{} and its Brier score from \NgInTransBrier{} to
+\NgDTransBrier{}. Lexical-LR has a high ECE already in-generator (\NgInLexlrEce{}), where it makes almost no errors,
+because its raw probabilities are cautious: they fall on the correct side of 0.5 but far from 0 and 1. ECE alone
+therefore does not show whether a detector errs. Its Brier score, which grows from \NgInLexlrBrier{} to
+\NgDLexlrBrier{}, does. Because the order is kept, a threshold from validation human scores recovers most of the
+misses. With the 5\% rule the false negative rate on D falls to \NgDLexlrFnrFive{} for Lexical-LR,
+\NgDTransFnrFive{} for RoBERTa and \NgDCoordFnrFive{} for the Coordinator, at a false positive rate on CISA text of
+\NgDLexlrFprFive{} to \NgDTransFprFive{}. Its cost on vendor text is given in Table~\ref{tab:thresholds}.
+
+\emph{Training-free detectors: the order is lost.} Fast-DetectGPT and Binoculars already flag \NgInFastFpr{} and
+\NgInBinoFpr{} of the CISA excerpts in-generator, and on D their ROC-AUC falls to \NgDFastRocAuc{} and
+\NgDBinoRocAuc{}. A new threshold cannot repair this. With the 5\% rule their false negative rate on D rises to
+\NgDFastFnrFive{} and \NgDBinoFnrFive{}. E is as hard for them as D (ROC-AUC \NgEFastRocAuc{} and \NgEBinoRocAuc{}).
+
+\emph{E: no failure for the trained detectors.} RoBERTa and the Coordinator keep a false negative rate close to the
+in-generator one (\NgETransFnr{} and \NgECoordFnr{}), an ROC-AUC of \NgETransRocAuc{} and an ECE of \NgETransEce{}
+and \NgECoordEce{}. Lexical-LR misses \NgELexlrFnr{} of the E texts after training on one generator and
+\NgEAbcLexlrFnr{} after training on ABC.
+
+Pooled training acts on D like a lower threshold. Trained on ABC, RoBERTa misses \NgDAbcTransFnr{} of the D texts
+and its ECE falls to \NgDAbcTransEce{}, while its false positive rate on CISA rises from \NgDTransFpr{} to
+\NgDAbcTransFpr{} and on vendor text to the rates of Table~\ref{tab:publishers}. In a CTI pipeline the first case is
+the dangerous one. At the fixed threshold a detector trained on one generator lets most reports written by D
+through, while its alarm rate on human reports stays where it was, so watching the alarm rate would not reveal the
+failure. Since the order is kept, moving the threshold restores most of the recall. A loss of order, as for the
+training-free detectors, cannot be repaired this way.
+
 \input{../tables/en/coordinator.tex}
 \subsection{When the Coordinator helps}
 Table~\ref{tab:coordinator} compares the Coordinator with RoBERTa in all \GapN{} scenarios. RoBERTa is the
@@ -819,7 +919,10 @@ RADAR \cite{Hu_2023}, would be a stronger test.
 \subsection{Ranking and decision}
 Across generator and publisher shift, the supervised detectors kept an AUC near 1 while F1 or the false positive
 rate moved. A detector that meets new text can usually still order it, and what fails is the boundary fitted to
-the training generators and the training publisher. Calibrating on in-distribution validation data does not repair
+the training generators and the training publisher. On D the error rates show this directly
+(Table~\ref{tab:newgen}): the false negative rate of the trained detectors rises while their false positive rate
+on CISA text and their ROC-AUC stay at the in-generator values. Of the measures that need no threshold, only the
+Brier score and ECE register the change. Calibrating on in-distribution validation data does not repair
 this, in line with Ovadia et al.\ \cite{Ovadia_2019}. The two repairs that do work for an unseen generator, a
 threshold from human scores and training on several generators, both move the boundary towards human text, and
 both are paid for on a publisher the model has not seen. The false positive rate of Lexical-LR on Microsoft
@@ -862,7 +965,11 @@ the length-matched subsets and the error categories with a low base rate. \emph{
 publication dates on or before 30 November 2022. CISA pages show revision dates, Microsoft metadata were
 overwritten by a site migration and Mandiant posts were moved to a new host, so we date documents by advisory
 codes, URL dates and visible bylines and remove paragraphs that announce later updates. A paragraph revised after
-the cutoff without such a note would go unnoticed. \emph{Excluded pages.} \NBlocked{} CISA analysis reports could
+the cutoff without such a note would go unnoticed. \emph{Duplicate reports.} The collector treated CISA reposts
+of one advisory as separate sources, so \LeakDupShareMin{} to \LeakDupShareMax{} of the test excerpts had a
+near-duplicate in training or validation. We kept the original splits, because removing these excerpts changed no
+result of a trained detector by more than \LeakMaxDeltaCleanFOne{} (Section~\ref{sec:leakage}). Our check compares
+word 5-grams and would miss a report that restates another in new words. \emph{Excluded pages.} \NBlocked{} CISA analysis reports could
 not be read because the local antivirus flagged embedded malware samples.
 
 \subsection{Generation}
@@ -883,7 +990,8 @@ a human edit of machine text, and their LLM label is a convention.
 search was done. Binoculars ran in 4-bit precision with a truncated observer distribution, which shifts its
 scores, and Fast-DetectGPT with a single 2.7B model. Both are smaller than the strongest settings of their
 authors, and Ghostbuster could not be run. \emph{Calibration data.} Calibrators and thresholds come from validation
-splits of 20 or so sources per seed. A 99th percentile of some forty human scores is close to their maximum, and
+splits of \LeakValMin{} sources per seed. A 99th percentile of \LeakValHumanMin{} to
+\LeakValHumanMax{} human scores is close to their maximum, and
 the 1\% rule realizes false positive rates between \ThrInLexlrHumoneFpr{} and \ThrInTransHumoneFpr{} on CISA test
 text.
 \emph{Error analysis.} The categories are rule-based, defined by one author and not checked by a second annotator.
@@ -898,7 +1006,9 @@ Human and LLM-written CTI differ in measurable ways, and when the generator is k
 separate them. The difficulty starts with text the detector has not seen. In our corpus, where five generators
 write from the same extracted facts, the detectors kept ranking such text correctly and lost the decision: a large
 unseen generator that writes impersonally was scored below the threshold, and vendor blogs written in the first
-person were scored above it. Pooling training generators or setting the threshold from human scores repaired the
+person were scored above it. On that generator the errors were false negatives at an unchanged false positive rate,
+so the alarm rate gave no warning. A leakage audit confirmed that these results do not rest on test reports or
+their near-duplicates in training. Pooling training generators or setting the threshold from human scores repaired the
 first failure and aggravated the second, and calibration on validation data repaired neither. Human text from a
 second publisher in training was the one remedy without that cost. A stacked combination of detector agents was
 worth its cost on vendor text and fell behind RoBERTa where its most trusted member failed. Rewriting an LLM text
@@ -914,6 +1024,10 @@ stage runs from one command, \texttt{python -m src.cli <stage> --config <file>},
 \texttt{experiments/run\_all.sh} runs them in order. Model names, prompts, sampling temperatures, seeds and
 detector settings are in \texttt{configs/}, and package versions are pinned in \texttt{requirements.txt}. Every
 number in this paper is written by the report stage into a macro file, so the text cannot drift from the results.
+A verify stage checks this. It recomputes every metric from the saved per-text predictions with code independent
+of the evaluation stage, rebuilds the macro file and all tables from \texttt{results/}, compares them with the
+files this paper was compiled from, and writes a SHA-256 manifest of the result files against which any copy of the
+repository can be checked.
 The Microsoft and Mandiant excerpts are rebuilt by the collection script from the listed URLs and checked against
 stored hashes. API generations (D, E) cannot be repeated exactly, so their outputs are stored.
 

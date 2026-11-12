@@ -22,8 +22,8 @@ excerpt an Analyst agent extracts the facts as JSON, and for each generator a Wr
 write a new CTI text from those facts only, so all generators describe the same events. Test excerpts are also
 paraphrased, back-translated, "humanized", written with other prompts and mixed sentence by sentence with the human
 text. Detection is split across agents as well: Lexical-LR, Lexical-SVM, Stylometry, RoBERTa and an LLM Judge,
-combined by a Coordinator agent, with Fast-DetectGPT and Binoculars as training-free references. Splits are made by source report, every experiment runs with three seeds, and the tests
-cover generator, publisher and rewriting shift, calibration and decision thresholds, the Coordinator against RoBERTa
+combined by a Coordinator agent, with Fast-DetectGPT and Binoculars as training-free references. Splits are made by
+source report and audited for leakage, every experiment runs with three seeds, and the tests cover generator, publisher and rewriting shift, calibration and decision thresholds, the Coordinator against RoBERTa
 (the member that holds up best under shift), inference cost and an error analysis of false negatives and false
 positives.
 
@@ -104,8 +104,10 @@ python -m src.cli calibrate   --config configs/experiments.yaml  # calibrators a
 python -m src.cli compare     --config configs/experiments.yaml  # Coordinator against its members and variants
 python -m src.cli robust      --config configs/experiments.yaml  # publishers, rewriting, mixing, augmented training
 python -m src.cli errors      --config configs/experiments.yaml  # FN/FP categories with base rates, contrasts, regressions
+python -m src.cli leakage     --config configs/experiments.yaml  # split audit, near-duplicates, control trainings
 python -m src.cli cost        --config configs/experiments.yaml  # inference time and GPU memory
 python -m src.cli report      --config configs/experiments.yaml  # paper/numbers.tex and paper/tables
+python -m src.cli verify      --config configs/experiments.yaml  # paper and tables against results, SHA-256 manifest
 pytest tests/
 ```
 
@@ -141,6 +143,10 @@ All parameters live in [configs/generation.yaml](configs/generation.yaml) and
   (2,000 resamples) for intervals and paired comparisons. Runs are pooled before testing so that each Holm family
   stays small (one test per detector and target, per scenario, or per condition and detector); per-run tests are
   reported after Benjamini-Hochberg. Exact McNemar between detectors, Holm-corrected per detector pair.
+- Leakage checks: every saved prediction is checked against the split of its seed; every test text is compared with
+  all training and validation texts by word 5-gram containment (near-duplicate at 0.5, strict cut 0.2); all main
+  results are recomputed without near-duplicates; Lexical-LR and Stylometry are retrained with near-duplicate
+  reports joined, with a split by excerpt, and with shuffled labels.
 - Error analysis: categories with their base rate among all texts, misclassified against correctly classified texts
   (Cliff's delta), and logistic regressions with source-clustered errors, for missed D texts (single-generator
   models) and flagged Microsoft/Mandiant excerpts (ABC models).
@@ -167,6 +173,19 @@ Mean F1 over three seeds, models trained on one of A, B, C (full tables in [resu
   excerpts when trained on one generator, 4-5% on two and 14-15% on three (RoBERTa: 8-9%, 14-16%, 16-20%; CISA
   stays at 0-4%). Adding one vendor publisher to training brings the other below 6%. The training-free detectors
   show fewer false positives on vendor text than on CISA text.
+- On D the trained detectors fail in one direction: after single-generator training their false positive rate on
+  CISA text stays at the in-generator value (0-1.4%) while the false negative rate rises to 0.79 (Lexical-LR), 0.22
+  (RoBERTa) and 0.41 (Coordinator). ROC-AUC stays at 0.98-0.99, and only the Brier score and ECE register the shift
+  (RoBERTa ECE 0.013 in-generator, 0.113 on D). The human 5% threshold brings the false negative rate down to
+  0.07-0.18. Fast-DetectGPT and Binoculars lose the ranking itself (AUC 0.70-0.73 on D), which no threshold repairs.
+- Leakage: no scored test row comes from a training or validation source (196,850 rows audited). CISA posts some
+  advisories twice, under an advisory code and a descriptive address, so 9-14% of test excerpts have a near-duplicate
+  in training or validation. Without them no F1 of a trained detector changes by more than 0.017; a split by excerpt
+  does not raise the scores, and shuffled labels give ROC-AUC 0.43-0.53.
+- Consistency: `verify` recomputes all 2,166 rows of `results/metrics_all.csv` from the per-text predictions with
+  separate code (largest difference 0), rebuilds the 2,360 macros and 38 tables of the papers from `results/` and
+  finds them identical, and writes `results/manifest.csv` (SHA-256 of 239 result, data and figure files, LF line
+  endings) to check any copy of the repository against.
 - Error analysis: missed D texts are longer, less diverse and richer in proper nouns than caught ones; D uses the
   first person in 10% of its texts (CISA 14%, Gemini 45%, local generators 39-61%). Flagged vendor excerpts are more
   diverse, use the first person more and are shorter than the ones that pass. The two failures mirror each other.
@@ -180,7 +199,7 @@ Mean F1 over three seeds, models trained on one of A, B, C (full tables in [resu
 - On texts with 50% LLM sentences RoBERTa finds 95% when the LLM block comes first and 27% when it comes last; it
   reads only the first 256 tokens.
 
-The paper takes every number from `paper/numbers.tex`; the figures above are copied from it on 2026-11-11.
+The paper takes every number from `paper/numbers.tex`; the figures above are copied from it on 2026-11-12.
 
 F1 per training set (rows) and test generator (columns), mean of three seeds:
 
@@ -205,7 +224,7 @@ Fast-DetectGPT) and Hans et al. (2024, Binoculars).
 configs/      generation and experiment parameters
 data/         raw human excerpts, generated texts, processed dataset and splits
 src/          one module per stage (collect, agents, variants, dataset, features, zeroshot, detectors, evaluate,
-              calibration, compare, robust, errors, cost, report)
+              calibration, compare, robust, errors, leakage, cost, report, verify)
 experiments/  run_all.sh / run_all.ps1, resume_generation.sh
 results/      metrics, statistics, predictions per text
 figures/      figures used in the paper

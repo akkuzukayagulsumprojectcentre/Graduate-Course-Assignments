@@ -46,7 +46,8 @@ yeni metinler yazdırıyor; bu metinlerden on iki yeniden yazım, prompt ve kıs
 ajanlara bölünmüş durumda: TF-IDF modelleri, bir stilometrik model, ince ayarlı RoBERTa ve bir LLM yargıç,
 yığınlanmış bir Koordinatör'ü besliyor; Fast-DetectGPT ve Binoculars eğitimsiz referans olarak kullanılıyor. Aynı
 üreticide F1 \FoneInCoord{} oluyor. Görülmemiş 120B bir modelde bir TF-IDF dedektörünün F1 değeri \FoneDLexLR{}
-düzeyine düşüyor, ROC-AUC değeri ise \AucDLexLR{} olarak kalıyor. Bir yerine üç üreticiyle eğitim bu F1 değerini
+düzeyine düşüyor, ROC-AUC değeri ise \AucDLexLR{} olarak kalıyor: üretilmiş metinlerin \NgDLexlrFnr{} kadarını
+kaçırıyor, hiçbir insan metnini işaretlemiyor; yani skorların sırası korunuyor, bozulan yalnızca eşik. Bir yerine üç üreticiyle eğitim bu F1 değerini
 \PoolDLexLR{} düzeyine çıkarıyor, ama aynı dedektörün Microsoft parçalarındaki yanlış pozitif oranını da
 \PoolfprOneMicrosoftLexlr{} değerinden \PoolfprThreeMicrosoftLexlr{} değerine yükseltiyor. Yalnızca insan
 skorlarından belirlenen bir eşik de aynı bedeli ödetiyor. Hata analizi nedenini gösteriyor: kaçırılan metinler CISA
@@ -55,7 +56,10 @@ parçaları gibi uzun, kişisiz ve sözcük çeşitliliği düşük metinler; ya
 kalibrasyon, üretici kayması altında olasılıkları kötüleştiriyor. Bir LLM ile yeniden ifade eğitimsiz dedektörlerin
 duyarlılığını düşürüyor, eğitilmiş olanlarınkini değiştirmiyor; kaynaktan yeniden yazım ve cümle düzeyinde
 karıştırma ikisini de düşürüyor. Koordinatör \GapN{} senaryonun \GapWins{} tanesinde RoBERTa'dan iyi, en çok ağırlık
-verdiği üyenin çöktüğü \GapLosses{} senaryoda ondan kötü.
+verdiği üyenin çöktüğü \GapLosses{} senaryoda ondan kötü. Kaydedilmiş tahminler üzerinde yapılan sızıntı denetimi
+eğitimde hiçbir test raporu bulmuyor; ancak CISA'nın aynı bildirimi iki kez yayımlaması, test parçalarının
+\LeakDupShareMin{}--\LeakDupShareMax{} kadarının eğitimde yakın bir kopyasının bulunmasına yol açıyor. Bunlar
+çıkarıldığında hiçbir eğitilmiş dedektörün F1 değeri \LeakMaxDeltaCleanFOne{} değerinden fazla değişmiyor.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -110,7 +114,8 @@ var.
 \item Beş model ailesinden beş üreticinin aynı çıkarılmış olgulardan yazdığı, içeriği denetlenmiş bir CTI derlemi
 kuruyoruz. Hepsi 30 Kasım 2022 veya öncesinde yayımlanmış üç yayıncının insan metni, üretici kaymasını yayıncı
 kaymasından ayırıyor; test parçalarına on iki yeniden yazım, prompt stratejisi ve kısmi üretim koşulu uygulanıyor.
-Bütün bölmeler kaynak rapor düzeyinde yapılıyor.
+Bütün bölmeler kaynak rapor düzeyinde yapılıyor ve bölme, kaydedilmiş tahminler üzerinde, yakın kopya raporlar
+için ve kontrol eğitimleriyle denetleniyor.
 \item Kayma altında sıralamayı ve kararı ayrı ayrı ölçüyoruz. Üç kalibratör ve beş eşik kuralı yalnızca doğrulama
 verisiyle kuruluyor; kurallardan ikisi test üreticisi hakkında hiçbir varsayım yapmıyor. Sonuç şu: görülmemiş bir
 üretici için işe yarayan iki çare, havuzlanmış eğitim verisi ve insan skorlarından belirlenen eşik, başka bir
@@ -288,7 +293,7 @@ Bölme kaynak rapor düzeyinde yapılıyor: CISA kaynaklarının \%70'i eğitim,
 seed (42, 123, 2024) için ayrı. Bir insan parçası ve yeniden yazılmış olsun olmasın bütün LLM sürümleri her zaman
 aynı kümeye düşüyor. Vektörleştiriciler, ölçekleyiciler, dedektörler, Koordinatör, kalibratörler ve eşikler
 yalnızca eğitim veya doğrulama verisiyle kuruluyor. Test, D, E, yeniden yazılmış ve dış yayıncı metinleri yalnızca
-puanlanıyor.
+puanlanıyor. Bu ayrımın nasıl denetlendiği Bölüm~\ref{sec:leaksetup}'de anlatılıyor.
 
 \section{Tespit Ajanları}\label{sec:agents}
 \subsection{Üyeler}
@@ -385,6 +390,23 @@ uygulanıyor. Testlerin çalıştırma veya özellik başına verildiği yerlerd
 \cite{Benjamini_1995} kullanılıyor. Dedektörler tek tek test kümelerinde kesin McNemar testiyle de
 karşılaştırılıyor. Düzeltme dedektör çifti başına Holm ile. Dilsel farklar Mann-Whitney U testi ve etki büyüklüğü
 olarak Cliff $\delta$ ile sınanıyor. Ayırt edici n-gram'lar ağırlıklı log-odds ile sıralanıyor \cite{Monroe_2008}.
+Görülmemiş üreticiler için yanlış pozitif oranını (işaretlenen insan metinleri) ve yanlış negatif oranını
+(kaçırılan LLM metinleri) ayrı ayrı, ROC-AUC ve kalibrasyon ölçüleriyle yan yana veriyoruz; F1 bu iki hatayı
+birleştiriyor, oysa CTI'da bedelleri farklı.
+
+\subsection{Sızıntı denetimi}\label{sec:leaksetup}
+Kaynak kimliğine göre bölme, ancak her raporun tek bir kimliği varsa sızıntıyı önler. Bu yüzden ayrımı, burada
+raporlanan çalıştırmaların kaydedilmiş tahminleri üzerinde dört yoldan denetliyoruz. Birincisi, her tahmin dosyası
+taranıyor: puanlanan her test satırı, kendi seed'inin test bölmesindeki bir kaynaktan gelmeli. İkincisi, insan ya
+da LLM yazımı her test metni, aynı seed'in bütün eğitim ve doğrulama metinleriyle kelime 5-gramı kapsanma oranıyla
+karşılaştırılıyor; bu oran, metnin 5-gramlarından tek bir başka metinde de geçenlerin payı. En az \LeakDup{} oranı
+yakın kopya sayılıyor; \LeakStrict{} değerindeki daha sıkı bir eşik uzun pasaj paylaşan parçaları da işaretliyor.
+Üçüncüsü, bütün ana sonuçlar, insan metninin ya da herhangi bir LLM sürümünün yakın kopyası bulunan test parçaları
+çıkarılarak yeniden hesaplanıyor. Parça ve bütün LLM metinleri birlikte çıkarıldığı için test kümeleri eşleştirilmiş
+kalıyor. Dördüncüsü, Lexical-LR ve Stilometri üç kontrol bölmesiyle yeniden eğitiliyor: yakın kopya raporları
+bölmeden önce tek grupta birleştiren bir bölme; bir raporun parçalarının iki tarafa da düşebildiği, parça bazlı bir
+bölme (kaynak bazlı bölmenin önlemeye çalıştığı sızıntı); ve eğitim etiketleri karıştırılmış kaynak bazlı bölme.
+Sonuncusu, etiket bilgisi özellikler veya önişleme yoluyla modele ulaşmıyorsa şans düzeyinde sonuç vermeli.
 
 \subsection{Kalibrasyon ve eşikler}
 Her dedektör ve eğitim için doğrulama kümesinde üç kalibratör kuruyoruz: Platt ölçekleme (skorun logiti üzerinde
@@ -428,6 +450,45 @@ değiştirdiğini kestiriyor. Kuralları tek bir yazar tanımladı. İkinci bir 
 
 \section{Sonuçlar}\label{sec:results}
 \input{../tables/tr/data.tex}
+\input{../tables/tr/leakage.tex}
+\input{../tables/tr/controls.tex}
+\subsection{Sızıntı denetimi}\label{sec:leakage}
+Bölme denetimi hiçbir ihlal bulmuyor. \LeakAuditFiles{} tahmin dosyasındaki \LeakAuditRows{} puanlanmış test
+satırından \LeakAuditBad{} tanesi kendi seed'inin eğitim veya doğrulama kaynağından geliyor ve hiçbir seed'de bir
+kaynak kimliği iki bölmede birden geçmiyor. Yakın kopya taraması ise başka türden bir sızıntı buluyor. CISA bazı
+bildirimleri birden çok kez yayımlıyor: AA22-110A gibi bir bildirim koduyla ve açıklayıcı bir adresle ya da
+güncellenmiş bir kopya olarak. Toplayıcı her kopyayı ayrı bir kaynak olarak kaydetmiş. Hidden Cobra zararlı yazılım
+raporları gibi paragrafları olduğu gibi yeniden kullanan raporlarla birlikte \LeakNSources{} kaynağın
+\LeakDupSources{} tanesi \LeakDupGroups{} yakın kopya grubu oluşturuyor. Seed'e göre \LeakTestChunksMin{} ile
+\LeakTestChunksMax{} test parçasının \LeakChunksDupMin{} ile \LeakChunksDupMax{} tanesinin (\LeakDupShareMin{} ile
+\LeakDupShareMax{}) eğitimde veya doğrulamada insan metni olarak yakın bir kopyası var; sıkı eşikte bu sayı
+\LeakChunksStrictMin{} ile \LeakChunksStrictMax{}. Hiçbir LLM metninin yakın kopyası yok. İki rapor aynı olguları taşısa bile Yazarlar başka bir metnin ifadesini tekrarlamıyor. Parça bazlı bir
+bölmenin ayıracağı, aynı rapordan gelen parçalar birbiriyle az örtüşüyor (medyan kapsanma \LeakSiblingMedian{};
+\LeakNSiblings{} parçadan \LeakSiblingDup{} tanesi yakın kopya). Hiçbir Microsoft veya Mandiant parçası bir CISA
+parçasının yakın kopyası değil (en yüksek kapsanma \LeakVendorMax{}).
+
+Bu kopyalar sonuçları taşımıyor (Tablo~\ref{tab:leakage}). Kopyalar çıkarıldığında eğitilmiş dedektörlerin F1
+değeri hiçbir senaryoda \LeakMaxDeltaCleanFOne{} değerinden, ROC-AUC değeri \LeakMaxDeltaCleanAuc{} değerinden fazla
+değişmiyor. Sıkı eşikte en büyük değişimler \LeakMaxDeltaStrictFOne{} ve \LeakMaxDeltaStrictAuc{}. Ezberlenmiş bir
+kopyanın en çok fark yaratabileceği D'de Lexical-LR'nin F1 değeri bütün test parçalarında \LeakDLexlrAll{},
+kopyalar olmadan \LeakDLexlrClean{}; RoBERTa'nınki \LeakDTransAll{} ve \LeakDTransClean{}. Eğitilmiş dedektör ve
+senaryo bileşimlerinin \LeakNCompCleanFOne{} tanesinden \LeakNDownCleanFOne{} tanesinde F1 düşüyor,
+\LeakNUpCleanFOne{} tanesinde yükseliyor, kalanlarda üç basamağa kadar aynı kalıyor; ROC-AUC hiçbirinde yükselmiyor.
+Hiçbir eğitim metni görmeyen eğitimsiz dedektörler de aynı yönde \LeakMaxDeltaZeroFone{} değerine kadar
+değişiyor. Demek ki kopyası olan parçalar sınıflandırılması biraz daha kolay parçalar; bu büyüklükte bir değişim,
+test parçalarının onda birini çıkarmanın kendi başına yol açtığı değişim.
+
+Kontrol eğitimleri de aynı sonucu veriyor (Tablo~\ref{tab:controls}). Yakın kopya raporlar bölmeden önce
+birleştirildiğinde Lexical-LR aynı üreticide F1 \CtrlGroupInLexlr{}, yerel
+üreticiler arasında \CtrlGroupCrossLexlr{} ve D'de \CtrlGroupDLexlr{} buluyor; bu makalede kullanılan bölmeyle bu
+değerler \CtrlSourceInLexlr{}, \CtrlSourceCrossLexlr{} ve \CtrlSourceDLexlr{}. Bir test raporunun diğer
+parçalarını eğitime sokan parça bazlı bölme de skorları yükseltmiyor (\CtrlChunkInLexlr{}, \CtrlChunkCrossLexlr{}
+ve \CtrlChunkDLexlr{}). Bu, tasarımın bir sonucu: bir insan parçası ve LLM sürümleri aynı olguları taşıyor ve her
+zaman aynı bölmeye düşüyor; bu yüzden bir raporun içeriğini bilmek iki sınıfı ayırmaya yaramıyor. Eğitim etiketleri
+karıştırıldığında iki dedektör de şans düzeyine iniyor (ROC-AUC \CtrlShuffledAucMin{} ile \CtrlShuffledAucMax{}
+arasında); yani etiket bilgisi modellere özellikler veya önişleme yoluyla ulaşmıyor. Diğer bütün sonuçlar özgün
+bölmeleri kullanıyor; kopya çiftleri depoda listeleniyor.
+
 \subsection{Dilsel farklar}
 Tablo~\ref{tab:data} ve Şekil~\ref{fig:boxes} derlemi özetliyor. \NTests{} üretici-özellik karşılaştırmasının
 \NLargeEffects{} tanesinde, Benjamini-Hochberg düzeltmesinden sonra da büyük bir etki ($|\delta| \geq 0.474$)
@@ -456,7 +517,7 @@ yönde ayrılıyor. \NPubTests{} yayıncı-özellik karşılaştırmasının \NP
 
 \input{../tables/tr/main.tex}
 \subsection{Aynı üretici ve üreticiler arası tespit}
-Tek bir üreticiyle eğitilen modellerin ana sonucu Tablo~\ref{tab:main}'de. Aynı üreticide tespit neredeyse
+Tek bir üreticiyle eğitilen modellerin ana sonucu Tablo~\ref{tab:main}'te. Aynı üreticide tespit neredeyse
 kusursuz: F1, sözcüksel baseline'larda \FoneInLexLR{}, RoBERTa'da \FoneInTrans{}, Koordinatör'de \FoneInCoord{}.
 Başka bir yerel üreticiye geçmek az kaybettiriyor (Lexical-LR \FoneCrossLexLR{}, RoBERTa \FoneCrossTrans{}). İki
 üreticiyle eğitilip üçüncüsünde sınanan modellerde de sonuç benzer (Lexical-LR \LooLexLR{}, RoBERTa \LooTrans{}).
@@ -507,7 +568,7 @@ de bu tabloyla uyumlu. Holm düzeltmesinden sonra RoBERTa \McTransLexN{} test k�
 Lexical-LR'den, Koordinatör \McCoordLexSig{} tanesinde Lexical-LR'den, \McCoordTransSig{} tanesinde RoBERTa'dan
 farklı.
 
-Ödevde istenen düzenin, İnsan + A ile eğitimin bütün metrikleri Tablo~\ref{tab:required}'de; Koordinatör'ün seed 42
+Ödevde istenen düzenin, İnsan + A ile eğitimin bütün metrikleri Tablo~\ref{tab:required}'da; Koordinatör'ün seed 42
 için karmaşıklık matrisleri Şekil~\ref{fig:cm}'de. Koordinatör A'da \CmAFP{} yanlış pozitif ve \CmAFN{} yanlış
 negatif yapıyor (TP \CmATP{}, TN \CmATN{}). D'de yanlış pozitif sayısı yine \CmDFP{}, ama
 \the\numexpr\CmDTP+\CmDFN\relax{} LLM metninin \CmDFN{} tanesi kaçıyor. Bir CTI hattında pahalı olan hata yanlış
@@ -547,7 +608,7 @@ oranı Lexical-LR'de \PubMicrosoftLexlrFprAug{}, RoBERTa'da \PubMicrosoftTransFp
 yanılıyorlar (Binoculars CISA'da \PubCisaBinoFpr{}, Microsoft'ta \PubMicrosoftBinoFpr{}, Mandiant'ta
 \PubMandiantBinoFpr{}; Fast-DetectGPT sırasıyla \PubCisaFastFpr{}, \PubMicrosoftFastFpr{} ve
 \PubMandiantFastFpr{}). Puanlama yapan bir dil modeli CISA üslubunu tanımıyor, dolayısıyla firma yazısı ona
-olağandışı görünmüyor. Hangi firma parçalarının işaretlendiği Bölüm~\ref{sec:erranalysis}'te inceleniyor.
+olağandışı görünmüyor. Hangi firma parçalarının işaretlendiği Bölüm~\ref{sec:erranalysis}'de inceleniyor.
 
 \input{../tables/tr/robustness.tex}
 \subsection{Yeniden yazım, prompt stratejisi ve kısmi üretim}
@@ -567,7 +628,7 @@ Editör geçişi çıktıyı puanlama modeli için daha az öngörülebilir kıl
 Modelin insan parçasını okuyup yeniden yazdığı tek ajanlı yeniden yazım ise LLM metnini saklıyor. Duyarlılık
 Lexical-LR'de \RecSingleLexlr{}, RoBERTa'da \RecSingleTrans{}, Koordinatör'de \RecSingleCoord{} düzeyine düşüyor.
 Aynı modelin aynı parçalara ait çok ajanlı metinlerinde \RecBaseSingleLexlr{}. Test kümeleri küçük: üç üretici ve
-üç seed üzerinden \NSingleTest{} tek ajanlı metin var. Bu, Tablo~\ref{tab:robustness}'teki standart sapmalarda
+üç seed üzerinden \NSingleTest{} tek ajanlı metin var. Bu, Tablo~\ref{tab:robustness}'deki standart sapmalarda
 görülüyor. Kelime üçlülerinin dörtte biri ile üçte biri arasındaki kısmını kaynakla paylaşan metinler bunlar
 (Bölüm~\ref{sec:why}).
 
@@ -632,7 +693,7 @@ düzeyinden \ThrDTransHumfiveFOne{} düzeyine).
 
 Bedeli diğer yayıncılarda görülüyor. Tablo~\ref{tab:thresholds} tek üreticiyle eğitilen modeller için hesaplandı.
 Bu modeller sabit eşikte firma parçalarının yalnızca \ThrExternalLexlrFixedFpr{} (Lexical-LR) ve
-\ThrExternalCoordFixedFpr{} (Koordinatör) kadarını işaretliyor, yani Tablo~\ref{tab:publishers}'teki havuzlanmış
+\ThrExternalCoordFixedFpr{} (Koordinatör) kadarını işaretliyor, yani Tablo~\ref{tab:publishers}'deki havuzlanmış
 modellerden çok daha azını. \%5 kuralıyla bu oranlar \ThrExternalLexlrHumfiveFpr{} ve
 \ThrExternalCoordHumfiveFpr{} oluyor. Firma insan metinleri CISA metinlerinden yüksek skor aldığı için CISA
 skorlarının bir yüzdeliği bunların daha çoğunu geçiriyor. Beş kuraldan D'yi en çok geri kazandıranlar, firma
@@ -645,6 +706,46 @@ metinlerinde yanlış alarmı da en çok artıranlar. Havuzlanmış eğitimde g�
 çizgi 0.5.}
 \label{fig:sweep}
 \end{figure}
+
+\input{../tables/tr/newgen.tex}
+\subsection{Yeni üreticilerde hata oranları ve olasılık kalitesi}\label{sec:newgen}
+Tablo~\ref{tab:newgen}, D ve E için yanlış pozitif oranını, yanlış negatif oranını, ROC-AUC değerini ve kalibrasyon
+ölçülerini yan yana veriyor. Birlikte okunduklarında üç durumu birbirinden ayırıyorlar.
+
+\emph{Tek üreticiyle eğitimden sonra D: sıra korunuyor, eşik bozuluyor.} Eğitilmiş dedektörler yalnızca tek yönde
+yanılıyor. D test kümelerinin CISA parçalarındaki yanlış pozitif oranları aynı üreticidekiyle aynı (Lexical-LR
+\NgDLexlrFpr{}, RoBERTa \NgDTransFpr{}, Koordinatör \NgDCoordFpr{}), çünkü bunlar aynı insan metinleri. Yanlış
+negatif oranı ise aynı üreticideki en fazla \NgInLexlrFnr{} değerinden \NgDLexlrFnr{}, \NgDTransFnr{} ve
+\NgDCoordFnr{} değerlerine çıkıyor. ROC-AUC \NgDLexlrRocAuc{} ile \NgDCoordRocAuc{} arasında kalıyor. D metinleri
+hâlâ insan parçalarından yüksek skor alıyor, ama birçoğu 0.5'in altında. Olasılıklar bu kaymayı kaydediyor.
+RoBERTa'nın ECE değeri \NgInTransEce{} değerinden \NgDTransEce{} değerine, Brier skoru \NgInTransBrier{} değerinden
+\NgDTransBrier{} değerine çıkıyor. Lexical-LR'nin ECE değeri, neredeyse hiç hata yapmadığı aynı üreticide bile
+yüksek (\NgInLexlrEce{}), çünkü ham olasılıkları temkinli: 0.5'in doğru tarafına düşüyor ama 0 ve 1'den uzak
+kalıyor. Bu yüzden ECE tek başına dedektörün yanılıp yanılmadığını göstermiyor. Kaçırılan metinleri de sayan Brier
+skoru gösteriyor: \NgInLexlrBrier{} değerinden \NgDLexlrBrier{} değerine çıkıyor. Sıra korunduğu için doğrulama
+insan skorlarından belirlenen bir eşik kaçırılan metinlerin çoğunu geri kazanıyor. \%5 kuralıyla D'deki yanlış
+negatif oranı Lexical-LR için \NgDLexlrFnrFive{}, RoBERTa için \NgDTransFnrFive{}, Koordinatör için
+\NgDCoordFnrFive{} değerine iniyor; CISA metnindeki yanlış pozitif oranı ise \NgDLexlrFprFive{} ile
+\NgDTransFprFive{} arasında. Bu kuralın firma metnindeki bedeli Tablo~\ref{tab:thresholds}'de.
+
+\emph{Eğitimsiz dedektörler: sıra kayboluyor.} Fast-DetectGPT ve Binoculars aynı üreticide bile CISA parçalarının
+\NgInFastFpr{} ve \NgInBinoFpr{} kadarını işaretliyor; D'de ROC-AUC değerleri \NgDFastRocAuc{} ve
+\NgDBinoRocAuc{} düzeyine düşüyor. Yeni bir eşik bunu onaramaz: \%5 kuralıyla D'deki yanlış negatif oranları
+\NgDFastFnrFive{} ve \NgDBinoFnrFive{} değerine çıkıyor. E onlar için D kadar zor (ROC-AUC \NgEFastRocAuc{} ve
+\NgEBinoRocAuc{}).
+
+\emph{E: eğitilmiş dedektörler için bozulma yok.} RoBERTa ve Koordinatör'ün yanlış negatif oranı aynı üreticidekine
+yakın kalıyor (\NgETransFnr{} ve \NgECoordFnr{}); ROC-AUC \NgETransRocAuc{}, ECE \NgETransEce{} ve \NgECoordEce{}.
+Lexical-LR, tek üreticiyle eğitildiğinde E metinlerinin \NgELexlrFnr{} kadarını, ABC ile eğitildiğinde
+\NgEAbcLexlrFnr{} kadarını kaçırıyor.
+
+Havuzlanmış eğitim D üzerinde daha düşük bir eşik gibi etki ediyor. ABC ile eğitilen RoBERTa D metinlerinin
+\NgDAbcTransFnr{} kadarını kaçırıyor ve ECE değeri \NgDAbcTransEce{} düzeyine iniyor; buna karşılık CISA'daki yanlış
+pozitif oranı \NgDTransFpr{} değerinden \NgDAbcTransFpr{} değerine, firma metnindeki ise Tablo~\ref{tab:publishers}'deki
+değerlere çıkıyor. Bir CTI hattında tehlikeli olan ilk durum. Sabit eşikte, tek üreticiyle eğitilmiş bir dedektör
+D'nin yazdığı raporların çoğunu geçiriyor, insan raporlarındaki alarm oranı ise yerinde kalıyor; bu yüzden alarm
+oranını izlemek hatayı ortaya çıkarmazdı. Sıra korunduğu için eşiği kaydırmak duyarlılığın çoğunu geri getiriyor.
+Eğitimsiz dedektörlerde olduğu gibi sıranın kaybolduğu bir durum bu yolla onarılamaz.
 
 \input{../tables/tr/coordinator.tex}
 \subsection{Koordinatör ne zaman yardımcı oluyor}
@@ -851,7 +952,10 @@ olurdu.
 \subsection{Sıralama ve karar}
 Üretici ve yayıncı kaymasında denetimli dedektörlerin AUC değeri 1'e yakın kaldı. Değişen F1 ya da yanlış pozitif
 oranıydı. Yeni metinle karşılaşan bir dedektör onu çoğunlukla hâlâ doğru sıralayabiliyor. Bozulan, eğitim
-üreticilerine ve eğitim yayıncısına göre kurulmuş sınır. Dağılım içi doğrulama verisiyle kalibrasyon bunu
+üreticilerine ve eğitim yayıncısına göre kurulmuş sınır. D'deki hata oranları bunu doğrudan gösteriyor
+(Tablo~\ref{tab:newgen}): eğitilmiş dedektörlerin yanlış negatif oranı artarken CISA metnindeki yanlış pozitif
+oranları ve ROC-AUC değerleri aynı üreticideki düzeyde kalıyor. Eşik gerektirmeyen ölçülerden yalnızca Brier skoru
+ve ECE değişimi kaydediyor. Dağılım içi doğrulama verisiyle kalibrasyon bunu
 onarmıyor; Ovadia ve arkadaşlarının bulgusu da bu yönde \cite{Ovadia_2019}. Görülmemiş bir üretici için işe
 yarayan iki onarım, insan skorlarından belirlenen eşik ve birkaç üreticiyle eğitim, sınırı insan metnine doğru
 kaydırıyor ve ikisinin de bedeli modelin görmediği bir yayıncıda ödeniyor. Lexical-LR'nin Microsoft
@@ -895,7 +999,12 @@ hata kategorileri. \emph{Tarihler.} İnsan yazarlığı 30 Kasım 2022 veya önc
 CISA sayfaları revizyon tarihini gösteriyor, Microsoft üst verileri bir site taşımasıyla değişmiş ve Mandiant
 yazıları yeni bir sunucuya taşınmış. Bu yüzden belgeleri bildirim kodlarına, URL tarihlerine ve görünür yazar
 satırlarına göre tarihliyor ve sonraki güncellemeleri duyuran paragrafları siliyoruz. Tarih sınırından sonra böyle
-bir not olmadan değiştirilmiş bir paragraf fark edilmezdi. \emph{Dışarıda kalan sayfalar.} Yerel antivirüs gömülü
+bir not olmadan değiştirilmiş bir paragraf fark edilmezdi. \emph{Kopya raporlar.} Toplayıcı, CISA'nın aynı
+bildirimi yeniden yayımladığı sayfaları ayrı kaynaklar olarak aldı; bu yüzden test parçalarının \LeakDupShareMin{}
+ile \LeakDupShareMax{} kadarının eğitimde veya doğrulamada yakın bir kopyası vardı. Özgün bölmeleri koruduk, çünkü
+bu parçaları çıkarmak hiçbir eğitilmiş dedektörün sonucunu \LeakMaxDeltaCleanFOne{} değerinden fazla değiştirmedi
+(Bölüm~\ref{sec:leakage}). Denetimimiz kelime 5-gramlarını karşılaştırıyor; başka bir raporu yeni sözcüklerle
+yeniden anlatan bir raporu yakalamaz. \emph{Dışarıda kalan sayfalar.} Yerel antivirüs gömülü
 zararlı yazılım örneklerini işaretlediği için \NBlocked{} CISA analiz raporu okunamadı.
 
 \subsection{Üretim}
@@ -916,8 +1025,9 @@ LLM etiketleri de bir kabul.
 \emph{Model seçimi.} RoBERTa tek ince ayarlı kodlayıcı, Gemma~2~9B tek yargıç. Hiperparametre araması yapılmadı.
 Binoculars 4 bit hassasiyetle ve skorlarını kaydıran kırpılmış bir gözlemci dağılımıyla, Fast-DetectGPT tek bir
 2.7B modelle çalıştı. İkisi de yazarlarının en güçlü ayarlarından küçük; Ghostbuster çalıştırılamadı.
-\emph{Kalibrasyon verisi.} Kalibratörler ve eşikler seed başına 20 civarında kaynaktan oluşan doğrulama
-kümelerinden geliyor. Kırk kadar insan skorunun 99. yüzdeliği en büyük skora yakın; \%1 kuralı CISA test metninde
+\emph{Kalibrasyon verisi.} Kalibratörler ve eşikler seed başına \LeakValMin{} kaynaktan oluşan doğrulama
+kümelerinden geliyor. \LeakValHumanMin{} ile \LeakValHumanMax{} insan skorunun 99. yüzdeliği en
+büyük skora yakın; \%1 kuralı CISA test metninde
 \ThrInLexlrHumoneFpr{} ile \ThrInTransHumoneFpr{} arasında yanlış pozitif oranı veriyor. \emph{Hata analizi.}
 Kategoriler kural tabanlı, tek bir yazar tarafından tanımlanmış ve ikinci bir işaretleyiciyle kontrol edilmemiş.
 Özellik karşılaştırmaları ve regresyonlar gözlemsel: hangi metinlerin yanlış sınıflandırıldığını gösteriyorlar,
@@ -930,7 +1040,10 @@ değerinden küçük olamıyor.
 İnsan ve LLM yazımı CTI ölçülebilir biçimde farklı ve üretici biliniyorsa bunları ayırmaya bir TF-IDF modeli
 yetiyor. Zorluk, dedektörün görmediği metinle başlıyor. Beş üreticinin aynı çıkarılmış olgulardan yazdığı
 derlemimizde dedektörler bu metinleri doğru sıralamayı sürdürdü, kararı ise kaybetti: kişisiz yazan büyük ve
-görülmemiş bir üretici eşiğin altında, birinci şahısla yazılmış firma blogları eşiğin üstünde skor aldı. Eğitim
+görülmemiş bir üretici eşiğin altında, birinci şahısla yazılmış firma blogları eşiğin üstünde skor aldı. Bu
+üreticideki hatalar, yanlış pozitif oranı değişmeden ortaya çıkan yanlış negatiflerdi; alarm oranı hiçbir uyarı
+vermedi. Sızıntı denetimi, bu sonuçların eğitimdeki test raporlarına ya da onların yakın kopyalarına
+dayanmadığını doğruladı. Eğitim
 üreticilerini havuzlamak ya da eşiği insan skorlarından belirlemek ilk hatayı onardı, ikincisini büyüttü. Doğrulama
 verisiyle kalibrasyon ikisini de onarmadı. Bu bedeli ödetmeyen tek çare, eğitime ikinci bir yayıncının insan metnini
 katmaktı. Dedektör ajanlarının yığınlanmış birleşimi firma metinlerinde maliyetine değdi, en çok güvendiği üyenin
@@ -946,7 +1059,11 @@ proje reposunda yer alıyor.\footnote{\url{https://github.com/FurkanDevelops/llm
 komutla çalışıyor, \texttt{python -m src.cli <aşama> --config <dosya>}; \texttt{experiments/run\_all.sh} hepsini
 sırayla çalıştırıyor. Model adları, promptlar, örnekleme sıcaklıkları, seed'ler ve dedektör ayarları
 \texttt{configs/} içinde. Paket sürümleri \texttt{requirements.txt} içinde sabitlenmiş. Bu makaledeki her sayı
-rapor aşaması tarafından bir makro dosyasına yazılıyor. Böylece metin sonuçlardan kopamıyor. Microsoft ve Mandiant
+rapor aşaması tarafından bir makro dosyasına yazılıyor. Böylece metin sonuçlardan kopamıyor. Bunu bir doğrulama
+aşaması denetliyor: her metriği kaydedilmiş metin düzeyindeki tahminlerden, değerlendirme aşamasından bağımsız bir
+kodla yeniden hesaplıyor; makro dosyasını ve bütün tabloları \texttt{results/} içinden yeniden üretip bu makalenin
+derlendiği dosyalarla karşılaştırıyor; reponun herhangi bir kopyasının denetlenebilmesi için sonuç dosyalarının
+SHA-256 listesini yazıyor. Microsoft ve Mandiant
 parçaları toplama betiği tarafından listelenen URL'lerden yeniden oluşturuluyor ve kayıtlı özetlerle (hash)
 karşılaştırılıyor. API üretimleri (D, E) birebir tekrarlanamadığı için çıktıları saklanıyor.
 

@@ -1,0 +1,20 @@
+\begin{table}[t]
+\centering
+\scriptsize\setlength{\tabcolsep}{3pt}
+\caption{Kontrol eğitimleri, eşik 0.5'te F1 (üç seed ve A, B, C eğitim üreticileri üzerinden ortalama). İki alternatif bölmede test kümeleri ana deneydekinden farklıdır ve D ile E bu kümelerin daha az parçasını kapsar.}
+\label{tab:controls}
+\begin{tabular}{llcccc}
+\toprule
+Bölme & Dedektör & Aynı & Çapraz & D & E \\
+\midrule
+Rapor bazlı (kullanılan) & Lexical-LR & 0.997 & 0.966 & 0.329 & 0.961 \\
+Rapor bazlı (kullanılan) & Stilometri & 0.934 & 0.868 & 0.706 & 0.778 \\
+Yakın kopya raporlar birleşik & Lexical-LR & 0.997 & 0.955 & 0.317 & 0.965 \\
+Yakın kopya raporlar birleşik & Stilometri & 0.935 & 0.851 & 0.649 & 0.769 \\
+Parça bazlı (sızdıran) & Lexical-LR & 0.998 & 0.966 & 0.277 & 0.953 \\
+Parça bazlı (sızdıran) & Stilometri & 0.929 & 0.865 & 0.677 & 0.782 \\
+Rapor bazlı, etiketler karışık & Lexical-LR & 0.498 & 0.437 & 0.411 & 0.373 \\
+Rapor bazlı, etiketler karışık & Stilometri & 0.538 & 0.483 & 0.415 & 0.464 \\
+\bottomrule
+\end{tabular}
+\end{table}

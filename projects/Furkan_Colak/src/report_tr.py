@@ -173,4 +173,37 @@ TR_EXT = {
     "Error & Opening of the text": "Hata & Metnin başı",
     " words, mean P(LLM) ": " kelime, ortalama P(LLM) ",
     ". Generator ": ". Üretici ",
+    # leakage.tex
+    "Main results on all test excerpts and without those whose human or LLM text has a near-duplicate in the "
+    "training or validation split of the same seed (containment of word 5-grams":
+        "Ana sonuçlar, bütün test parçaları üzerinde ve insan ya da LLM metninin aynı seed'in eğitim veya doğrulama "
+        "bölmesinde yakın kopyası bulunan parçalar çıkarılarak (kelime 5-gramlarının kapsanma oranı",
+    "; strict: ": "; sıkı: ",
+    "). Mean test-set size: ": "). Ortalama test kümesi büyüklüğü: ",
+    " texts. F1 is mean $\\pm$ std over three seeds.": " metin. F1, üç seed üzerinden ortalama $\\pm$ std.",
+    "Setting & Detector & \\multicolumn{3}{c}{F1}": "Senaryo & Dedektör & \\multicolumn{3}{c}{F1}",
+    " & & All & No dup. & Strict & All & No dup. & Strict": " & & Tümü & Kopyasız & Sıkı & Tümü & Kopyasız & Sıkı",
+    # controls.tex
+    "Control trainings, F1 at threshold 0.5 (mean over three seeds and the training generators A, B, C). Under the "
+    "two alternative splits the test sets differ from the main ones, and D and E cover fewer of their excerpts.":
+        "Kontrol eğitimleri, eşik 0.5'te F1 (üç seed ve A, B, C eğitim üreticileri üzerinden ortalama). İki alternatif "
+        "bölmede test kümeleri ana deneydekinden farklıdır ve D ile E bu kümelerin daha az parçasını kapsar.",
+    "Split & Detector & In & Cross & D & E": "Bölme & Dedektör & Aynı & Çapraz & D & E",
+    "By report (used)": "Rapor bazlı (kullanılan)",
+    "Near-duplicate reports joined": "Yakın kopya raporlar birleşik",
+    "By excerpt (leaky)": "Parça bazlı (sızdıran)",
+    "By report, labels shuffled": "Rapor bazlı, etiketler karışık",
+    # newgen.tex
+    "Errors, ranking and probability quality on the unseen generators D and E, next to the in-generator reference. "
+    "FPR is measured on the CISA excerpts of each test set and FNR on the LLM texts. ECE and Brier use the "
+    "uncalibrated scores. The last two columns use the threshold at the 95th percentile of validation human scores. "
+    "Mean $\\pm$ std over three seeds.":
+        "Görülmemiş üreticiler D ve E'de hata oranları, sıralama ve olasılık kalitesi; karşılaştırma için aynı üretici "
+        "sonuçları. FPR her test kümesinin CISA parçalarında, FNR LLM metinlerinde ölçülür. ECE ve Brier kalibre "
+        "edilmemiş skorlarla hesaplanır. Son iki sütunda eşik, doğrulama insan skorlarının 95. yüzdeliğidir. Üç seed "
+        "üzerinden ortalama $\\pm$ std.",
+    " & & \\multicolumn{6}{c}{Threshold 0.5, raw scores} & \\multicolumn{2}{c}{Human 5\\% rule}":
+        " & & \\multicolumn{6}{c}{Eşik 0.5, ham skorlar} & \\multicolumn{2}{c}{İnsan \\%5 kuralı}",
+    "Test & Detector & F1 & FPR & FNR & ROC-AUC & ECE & Brier & FPR & FNR":
+        "Test & Dedektör & F1 & FPR & FNR & ROC-AUC & ECE & Brier & FPR & FNR",
 }

@@ -8,7 +8,7 @@ if [ "${1:-}" = "--from" ]; then FROM=$2; shift 2; fi
 PY=${1:-python}
 cd "$(dirname "$0")/.."
 
-stages=(collect collect_ext generate variants build analyze zeroshot detect evaluate calibrate compare robust errors cost report)
+stages=(collect collect_ext generate variants build analyze zeroshot detect evaluate calibrate compare robust errors leakage cost report verify)
 started=0
 for st in "${stages[@]}"; do
     [ "$st" = "$FROM" ] && started=1

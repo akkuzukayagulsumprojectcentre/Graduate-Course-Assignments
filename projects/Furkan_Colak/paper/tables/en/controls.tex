@@ -1,0 +1,20 @@
+\begin{table}[t]
+\centering
+\scriptsize\setlength{\tabcolsep}{3pt}
+\caption{Control trainings, F1 at threshold 0.5 (mean over three seeds and the training generators A, B, C). Under the two alternative splits the test sets differ from the main ones, and D and E cover fewer of their excerpts.}
+\label{tab:controls}
+\begin{tabular}{llcccc}
+\toprule
+Split & Detector & In & Cross & D & E \\
+\midrule
+By report (used) & Lexical-LR & 0.997 & 0.966 & 0.329 & 0.961 \\
+By report (used) & Stylometry & 0.934 & 0.868 & 0.706 & 0.778 \\
+Near-duplicate reports joined & Lexical-LR & 0.997 & 0.955 & 0.317 & 0.965 \\
+Near-duplicate reports joined & Stylometry & 0.935 & 0.851 & 0.649 & 0.769 \\
+By excerpt (leaky) & Lexical-LR & 0.998 & 0.966 & 0.277 & 0.953 \\
+By excerpt (leaky) & Stylometry & 0.929 & 0.865 & 0.677 & 0.782 \\
+By report, labels shuffled & Lexical-LR & 0.498 & 0.437 & 0.411 & 0.373 \\
+By report, labels shuffled & Stylometry & 0.538 & 0.483 & 0.415 & 0.464 \\
+\bottomrule
+\end{tabular}
+\end{table}
